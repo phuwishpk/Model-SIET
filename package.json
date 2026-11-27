@@ -1,0 +1,12 @@
+{
+  "name": "model-siet",
+  "private": true,
+  "description": "3D model of the SIET KMITL faculty buildings (three.js)",
+  "scripts": {
+    "build": "python3 build.py",
+    "serve": "python3 -m http.server 8765"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  }
+}
