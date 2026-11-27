@@ -1,0 +1,63 @@
+# Builds index.html from src/ and exports model/SIET_KMITL_model.glb,
+# then commits both back to main under the name of the person who pushed.
+name: Build page and 3D model
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'build.py'
+      - 'tools/export_glb.py'
+      - 'package.json'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-model
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install three.js and Playwright
+        run: |
+          npm install --no-audit --no-fund
+          pip install playwright==1.63.0
+
+      - name: Build index.html
+        run: python3 build.py
+
+      - name: Export model/SIET_KMITL_model.glb
+        run: |
+          python3 -m http.server 8765 > /dev/null 2>&1 &
+          sleep 2
+          mkdir -p model
+          CHROME="$(command -v google-chrome || command -v chromium)" python3 tools/export_glb.py model/SIET_KMITL_model.glb
+
+      - name: Commit generated files
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git add index.html model/SIET_KMITL_model.glb
+          if git diff --cached --quiet; then
+            echo "index.html and the model are already up to date"
+            exit 0
+          fi
+          git commit -m "Build index.html and model/SIET_KMITL_model.glb from src"
+          git pull --rebase origin main
+          git push origin HEAD:main
