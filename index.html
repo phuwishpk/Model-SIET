@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>โมเดล 3 มิติ อาคาร SIET สจล.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Kanit:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: an architectural presentation — calm, exact, quietly proud of the place
+   IDEA: a site model on a review table; the model is the page, the UI is a thin legend around it
+   PICTURE: the live 3D faculty grounds, edge to edge, sun and shadows on white concrete and brick
+   COLOUR and TYPE: sky and white concrete lead, brick red supports, SIET-letter pink is the one accent; Kanit titles, IBM Plex Sans Thai UI
+   LAYOUT: full-bleed canvas; title top-left, toggles top-right, camera views along the bottom; on phones the toggles become one scrolling row */
+:root{color-scheme:light dark;
+  --panel:light-dark(rgba(255,255,255,.86),rgba(18,22,28,.82));
+  --panel-solid:light-dark(#ffffff,#161b22);
+  --ink:light-dark(#14181d,#eef1f4);
+  --muted:light-dark(#4d5661,#aab3bd);
+  --line:light-dark(rgba(20,24,29,.12),rgba(238,241,244,.14));
+  --pink:#c22f78;--pink-text:light-dark(#c22f78,#f58fc0);--pink-soft:light-dark(#fde7f1,#3a1528);
+  --brick:#a2503b;
+  --shadow:0 6px 24px rgba(10,20,30,.16);
+}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:#9cc9e3;color:var(--ink);font:15px/1.5 "IBM Plex Sans Thai",system-ui,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent}
+#stage{position:fixed;inset:0;touch-action:none}
+#stage canvas{display:block;width:100%;height:100%;outline:none}
+.labels{position:absolute;inset:0;pointer-events:none}
+.lbl{pointer-events:auto;cursor:pointer;font:500 13px/1.2 "IBM Plex Sans Thai",system-ui,sans-serif;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:5px 10px 5px 8px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.14);display:flex;align-items:center;gap:6px;transform:translateY(-14px);transition:opacity .25s}
+.lbl::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--pink);flex:none}
+.lbl:hover,.lbl.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+.lbl.on::before,.lbl:hover::before{background:#fff}
+.hide-labels .lbl{opacity:0;pointer-events:none}
+.ui{position:fixed;z-index:5}
+.title{top:14px;left:14px;max-width:min(470px,calc(100vw - 28px));background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:14px;padding:12px 16px 12px;box-shadow:var(--shadow)}
+.title h1{font:600 clamp(19px,2.3vw,25px)/1.12 Kanit,"IBM Plex Sans Thai",sans-serif;margin:0 0 3px;text-wrap:balance}
+.title h1 b{color:var(--pink-text);font-weight:600}
+.title p{margin:0;color:var(--muted);font-size:13.5px}
+.tools{top:14px;right:14px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:min(560px,calc(100vw - 500px))}
+.btn{flex:none;appearance:none;font:500 14px/1 "IBM Plex Sans Thai",system-ui,sans-serif;color:var(--ink);background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px;min-height:44px;padding:0 15px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;box-shadow:var(--shadow);white-space:nowrap}
+.btn svg{width:18px;height:18px;flex:none}
+.btn:hover{border-color:var(--pink)}
+.btn[aria-pressed=true]{background:var(--pink);color:#fff;border-color:var(--pink)}
+.btn:focus-visible,.view:focus-visible,.x:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
+.views{left:50%;transform:translateX(-50%);bottom:16px;display:flex;gap:4px;padding:5px;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow);max-width:calc(100vw - 20px);overflow-x:auto;scrollbar-width:none}
+.views::-webkit-scrollbar{display:none}
+.view{appearance:none;flex:none;font:500 14px/1 "IBM Plex Sans Thai",system-ui,sans-serif;color:var(--ink);background:transparent;border:0;border-radius:999px;min-height:42px;padding:0 15px;cursor:pointer;white-space:nowrap}
+.view:hover{background:var(--pink-soft)}
+.view[aria-current=true]{background:var(--ink);color:var(--panel-solid)}
+.info{left:14px;bottom:82px;width:min(360px,calc(100vw - 28px));background:var(--panel-solid);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px 15px;border-top:4px solid var(--pink)}
+.info h2{font:600 19px/1.2 Kanit,"IBM Plex Sans Thai",sans-serif;margin:0 40px 2px 0}
+.info .meta{color:var(--pink-text);font-weight:600;font-size:13.5px;margin:0 0 8px}
+.info ul{margin:0;padding-left:18px;color:var(--muted);font-size:14px}
+.info li{margin:2px 0}
+.x{position:absolute;top:8px;right:8px;width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center}
+.x:hover{background:var(--pink-soft);color:var(--ink)}
+.note{right:14px;bottom:20px;margin:0;font-size:13px;color:var(--muted);background:var(--panel);padding:4px 10px;border-radius:999px;border:1px solid var(--line);max-width:300px}
+.loading{inset:0;display:grid;place-items:center;background:#a9d0e6;color:#14181d;font:500 16px "IBM Plex Sans Thai",sans-serif;transition:opacity .5s}
+.loading.done{opacity:0;pointer-events:none}
+.loading .bar{width:180px;height:4px;border-radius:4px;background:rgba(0,0,0,.12);overflow:hidden;margin-top:10px}
+.loading .bar i{display:block;height:100%;width:40%;background:var(--pink);animation:ld 1.1s ease-in-out infinite}
+@keyframes ld{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+.err{display:none;max-width:420px;text-align:center;padding:0 20px}
+.touring .title,.touring .views,.touring .info,.touring .note,.touring .tools .btn:not(#tTour){opacity:0;pointer-events:none;transition:opacity .4s}
+@media (max-width:1000px){.tools{max-width:calc(100vw - 28px);top:auto;bottom:76px;right:auto;left:10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:2px 4px 6px;width:calc(100vw - 20px);justify-content:flex-start}
+  .tools::-webkit-scrollbar{display:none}
+  .info{bottom:136px}.note{display:none}}
+@media (max-width:600px){.title{padding:10px 13px}.title p{font-size:13px}.btn{font-size:13.5px;padding:0 13px}.view{padding:0 12px;font-size:13.5px}}
+@media (prefers-reduced-motion:reduce){.loading .bar i{animation:none}}
+</style>
+</head>
+<body>
+<div id="stage" aria-label="โมเดล 3 มิติของอาคารคณะครุศาสตร์อุตสาหกรรมและเทคโนโลยี สจล."></div>
+
+<header class="ui title">
+  <h1>อาคารคณะครุศาสตร์อุตสาหกรรมฯ <b>SIET</b> สจล.</h1>
+  <p>โมเดล 3 มิติ · ลากเพื่อหมุน · ซูมด้วยล้อเมาส์หรือสองนิ้ว · แตะอาคารเพื่อดูข้อมูล</p>
+</header>
+
+<div class="ui tools" role="toolbar" aria-label="ตัวเลือกการแสดงผล">
+  <button class="btn" id="tLabels" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>ป้ายชื่อ</button>
+  <button class="btn" id="tSpin" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>หมุนรอบ</button>
+  <button class="btn" id="tTime" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>ตอนเย็น</button>
+  <button class="btn" id="tClay" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>โมเดลขาว</button>
+  <button class="btn" id="tTour" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>นำเสนอ</span></button>
+  <button class="btn" id="tFull"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>เต็มจอ</button>
+</div>
+
+<nav class="ui views" aria-label="มุมกล้อง">
+  <button class="view" data-view="overview">ภาพรวม</button>
+  <button class="view" data-view="plaza">ลานน้ำพุ</button>
+  <button class="view" data-view="street">มุมสูงฝั่งถนน</button>
+  <button class="view" data-view="road">ถนนฉลองกรุง</button>
+  <button class="view" data-view="drone">มุมโดรน</button>
+  <button class="view" data-view="soi">ด้านซอย</button>
+  <button class="view" data-view="top">มุมบน</button>
+</nav>
+
+<aside class="ui info" id="info" hidden aria-live="polite">
+  <button class="x" id="infoClose" aria-label="ปิด"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  <h2 id="infoName"></h2>
+  <p class="meta" id="infoMeta"></p>
+  <ul id="infoLines"></ul>
+</aside>
+
+<p class="ui note">ผังอาคารวัดจากภาพดาวเทียม Google Maps · ความสูงประมาณจากภาพถ่ายและประวัติคณะ</p>
+
+<div class="ui loading" id="loading"><div style="text-align:center"><div id="loadMsg">กำลังสร้างโมเดล…</div><div class="bar"><i></i></div><p class="err" id="loadErr">เปิดโมเดล 3 มิติไม่ได้ เพราะเบราว์เซอร์นี้ไม่รองรับ WebGL ลองเปิดด้วย Chrome, Edge หรือ Safari รุ่นใหม่</p></div></div>
+
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<script type="module">
+// ---- 00_setup.js
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+const FONT_DATA = {"cssFontWeight":"bold","ascender":1216,"underlinePosition":-100,"cssFontStyle":"normal","boundingBox":{"yMin":-333,"xMin":-162,"yMax":1216,"xMax":1681},"resolution":1000,"descender":-334,"familyName":"Helvetiker","lineHeight":1549,"underlineThickness":50,"glyphs":{"S":{"x_min":0,"x_max":826,"ha":915,"o":"m 826 306 q 701 55 826 148 q 423 -29 587 -29 q 138 60 255 -29 q 0 318 13 154 l 208 318 q 288 192 216 238 q 437 152 352 152 q 559 181 506 152 q 623 282 623 217 q 466 411 623 372 q 176 487 197 478 q 18 719 18 557 q 136 958 18 869 q 399 1040 244 1040 q 670 956 561 1040 q 791 713 791 864 l 591 713 q 526 826 583 786 q 393 866 469 866 q 277 838 326 866 q 218 742 218 804 q 374 617 218 655 q 667 542 646 552 q 826 306 826 471 "},"I":{"x_min":41,"x_max":249,"ha":365,"o":"m 249 0 l 41 0 l 41 1013 l 249 1013 l 249 0 "},"E":{"x_min":0,"x_max":761.109375,"ha":824,"o":"m 761 0 l 0 0 l 0 1013 l 734 1013 l 734 837 l 206 837 l 206 621 l 690 621 l 690 446 l 206 446 l 206 186 l 761 186 l 761 0 "},"T":{"x_min":0,"x_max":809,"ha":894,"o":"m 809 831 l 509 831 l 509 0 l 299 0 l 299 831 l 0 831 l 0 1013 l 809 1013 l 809 831 "}}};
+// ---------------------------------------------------------------- renderer / scene
+const stage = document.getElementById('stage');
+const SMALL = Math.min(innerWidth, innerHeight) < 700;
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+} catch (e) {
+  document.getElementById('loadMsg').style.display = 'none';
+  document.querySelector('#loading .bar').style.display = 'none';
+  document.getElementById('loadErr').style.display = 'block';
+  throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, SMALL ? 1.5 : 1.75));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.62;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.domElement.className = 'labels';
+stage.appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.5, 6000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.64; // allow looking up from street level; camera height is clamped in the loop
+controls.minDistance = 4;
+controls.maxDistance = 900;
+controls.screenSpacePanning = true;
+
+// plan coordinates: x = east (m), z = south (m), measured from the NW corner of the satellite frame.
+// world = plan - OFF, so the middle of the site sits near the origin
+const OFF = new THREE.Vector3(85, 0, 105);
+const site = new THREE.Group();
+site.position.set(-OFF.x, 0, -OFF.z);
+scene.add(site);
+const P = (x, y, z) => new THREE.Vector3(x - OFF.x, y, z - OFF.z);
+
+const TICKERS = []; // per-frame callbacks (t, dt)
+const EXPORT = new URLSearchParams(location.search).has('export'); // trimmed road for model-file export (local tooling only)
+const RX0 = EXPORT ? -40 : -520, RX1 = EXPORT ? 200 : 640;
+const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+const RNG = (() => { let s = 1234567; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
+const rand = (a, b) => a + (b - a) * RNG();
+
+// ---------------------------------------------------------------- canvas textures
+function canvasTex(w, h, draw, { repeat = null, srgb = true } = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); draw(g, w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = ANISO;
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  if (repeat) t.repeat.set(repeat[0], repeat[1]);
+  return t;
+}
+function noiseFill(g, w, h, base, amp, n = 2600, size = 2) {
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < n; i++) {
+    const v = (RNG() - 0.5) * amp;
+    g.fillStyle = v > 0 ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${-v})`;
+    g.fillRect(RNG() * w, RNG() * h, size, size);
+  }
+}
+// 2 m x 2 m of running-bond brick
+function drawBrick(g, x0, y0, w, h, cols, rows, palette, mortar) {
+  g.fillStyle = mortar; g.fillRect(x0, y0, w, h);
+  const bw = w / cols, bh = h / rows;
+  for (let r = 0; r < rows; r++) {
+    const off = (r % 2) * bw / 2;
+    for (let c = -1; c <= cols; c++) {
+      const x = x0 + c * bw + off; if (x > x0 + w) continue;
+      g.fillStyle = palette[Math.floor(RNG() * palette.length)];
+      const xa = Math.max(x0, x + 1), xb = Math.min(x0 + w, x + bw - 1);
+      if (xb > xa) g.fillRect(xa, y0 + r * bh + 1, xb - xa, bh - 2);
+    }
+  }
+}
+const BRICK_PAL = ['#a14d38', '#ab573f', '#984632', '#b3603f', '#9a4a3a', '#a85a46'];
+const TAN_PAL = ['#c98a5c', '#c48354', '#d09263', '#bf7f55', '#cc8f5f'];
+const TEX = {};
+TEX.brick = canvasTex(512, 512, (g, w, h) => drawBrick(g, 0, 0, w, h, 8, 24, BRICK_PAL, '#cfc4b8'), { repeat: [0.5, 0.5] });
+TEX.brickTan = canvasTex(512, 512, (g, w, h) => drawBrick(g, 0, 0, w, h, 8, 24, TAN_PAL, '#e0d2c2'), { repeat: [0.5, 0.5] });
+
+// facade textures: one bay (3.0 m) x one storey (3.8 m), v=0 at floor level
+function facadeTex(kind, glow) {
+  return canvasTex(256, 256, (g, w, h) => {
+    const Y = v => h - (v / 3.8) * h, X = u => (u / 3.0) * w;
+    const win = (u0, v0, u1, v1) => {
+      if (glow) { g.fillStyle = RNG() < 0.72 ? '#ffd9a0' : '#3a2a18'; g.fillRect(X(u0), Y(v1), X(u1) - X(u0), Y(v0) - Y(v1)); return; }
+      const gr = g.createLinearGradient(0, Y(v1), 0, Y(v0));
+      gr.addColorStop(0, '#5f7b8c'); gr.addColorStop(0.5, '#33454f'); gr.addColorStop(1, '#283740');
+      g.fillStyle = gr; g.fillRect(X(u0), Y(v1), X(u1) - X(u0), Y(v0) - Y(v1));
+      g.fillStyle = '#d9dcdc'; // mullions
+      g.fillRect(X((u0 + u1) / 2) - 1.5, Y(v1), 3, Y(v0) - Y(v1));
+      g.fillRect(X(u0), Y(v0 + (v1 - v0) * 0.72) - 1.5, X(u1) - X(u0), 3);
+    };
+    if (glow) g.fillStyle = '#000', g.fillRect(0, 0, w, h);
+    if (kind === 'ribbon') {
+      if (!glow) { noiseFill(g, w, h, '#eeede8', 0.05, 600); }
+      win(0, 0.95, 3.0, 3.0);
+      if (!glow) { g.fillStyle = '#f4f3ef'; g.fillRect(0, Y(3.8), w, Y(3.05) - Y(3.8)); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, Y(3.05), w, 3); }
+    } else if (kind === 'brick') {
+      if (!glow) {
+        drawBrick(g, 0, Y(3.8), w, Y(0.45) - Y(3.8), 6, 30, BRICK_PAL, '#cdbfb2');
+        g.fillStyle = '#f0efea'; g.fillRect(0, Y(0.45), w, h - Y(0.45));
+        g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(0, Y(0.45), w, 2);
+      }
+      win(0.55, 1.0, 2.45, 3.2);
+    } else if (kind === 'tower') {
+      if (!glow) noiseFill(g, w, h, '#efeeea', 0.04, 500);
+      win(0.5, 0.9, 2.5, 3.1);
+    } else if (kind === 'yellow') {
+      if (!glow) noiseFill(g, w, h, '#e3c15a', 0.05, 500);
+      win(0.6, 1.0, 2.4, 3.0);
+    }
+  }, { repeat: [1 / 3.0, 1 / 3.8] });
+}
+
+TEX.paving = canvasTex(512, 512, (g, w, h) => {
+  noiseFill(g, w, h, '#c3beb5', 0.07, 3000);
+  g.strokeStyle = 'rgba(80,70,60,.28)'; g.lineWidth = 2;
+  for (let i = 0; i <= 8; i++) { g.beginPath(); g.moveTo(i * w / 8, 0); g.lineTo(i * w / 8, h); g.stroke(); g.beginPath(); g.moveTo(0, i * h / 8); g.lineTo(w, i * h / 8); g.stroke(); }
+}, { repeat: [1 / 4, 1 / 4] });
+// argyle paving of the front plaza (one tile = 8 m)
+TEX.plaza = canvasTex(512, 512, (g, w, h) => {
+  noiseFill(g, w, h, '#b9b5ae', 0.08, 3500);
+  const d = w / 2;
+  for (let i = -1; i < 3; i++) for (let j = -1; j < 3; j++) {
+    const cx = i * d + ((j % 2) ? d / 2 : 0), cy = j * d / 2;
+    g.fillStyle = (i + j) % 3 === 0 ? 'rgba(70,72,78,.55)' : 'rgba(120,118,115,.35)';
+    g.beginPath(); g.moveTo(cx, cy - d / 4); g.lineTo(cx + d / 4, cy); g.lineTo(cx, cy + d / 4); g.lineTo(cx - d / 4, cy); g.closePath(); g.fill();
+  }
+  g.strokeStyle = 'rgba(60,55,50,.2)'; g.lineWidth = 1.5;
+  for (let i = 0; i <= 16; i++) { g.beginPath(); g.moveTo(i * w / 16, 0); g.lineTo(i * w / 16, h); g.stroke(); g.beginPath(); g.moveTo(0, i * h / 16); g.lineTo(w, i * h / 16); g.stroke(); }
+}, { repeat: [1 / 8, 1 / 8] });
+TEX.asphalt = canvasTex(256, 256, (g, w, h) => noiseFill(g, w, h, '#5b5e62', 0.1, 4000, 2), { repeat: [1 / 6, 1 / 6] });
+TEX.grass = canvasTex(256, 256, (g, w, h) => noiseFill(g, w, h, '#7d9f58', 0.14, 5000, 3), { repeat: [1 / 5, 1 / 5] });
+TEX.solar = canvasTex(128, 256, (g, w, h) => {
+  g.fillStyle = '#c9cdd2'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#1d2c48'; g.fillRect(4, 4, w - 8, h - 8);
+  g.strokeStyle = 'rgba(160,180,210,.45)'; g.lineWidth = 1;
+  for (let i = 1; i < 6; i++) { g.beginPath(); g.moveTo(4 + i * (w - 8) / 6, 4); g.lineTo(4 + i * (w - 8) / 6, h - 4); g.stroke(); }
+  for (let i = 1; i < 12; i++) { g.beginPath(); g.moveTo(4, 4 + i * (h - 8) / 12); g.lineTo(w - 4, 4 + i * (h - 8) / 12); g.stroke(); }
+});
+TEX.ring = canvasTex(256, 256, (g, w, h) => {
+  g.clearRect(0, 0, w, h);
+  g.strokeStyle = '#ffffff'; g.lineWidth = 22;
+  g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 16, 0, Math.PI * 2); g.stroke();
+});
+
+const FAC = {};
+for (const k of ['ribbon', 'brick', 'tower', 'yellow']) FAC[k] = { map: facadeTex(k, false), glow: facadeTex(k, true) };
+
+// ---------------------------------------------------------------- materials
+const MAT = {};
+const std = (color, roughness = 0.85, metalness = 0, extra = {}) =>
+  new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
+MAT.white = std(0xf0efea, 0.82);
+MAT.white2 = std(0xe2e0da, 0.88);
+MAT.granite = std(0xbdb8b0, 0.7);
+MAT.brick = std(0xffffff, 0.92, 0, { map: TEX.brick });
+MAT.brickTan = std(0xffffff, 0.9, 0, { map: TEX.brickTan });
+MAT.glass = std(0x5f8493, 0.08, 0.85, { envMapIntensity: 1.15 });
+MAT.glassDark = std(0x2a3842, 0.22, 0.55, { emissive: 0xffcf8f, emissiveIntensity: 0 });
+MAT.glassRail = std(0x9fc3cf, 0.1, 0.3, { transparent: true, opacity: 0.35, depthWrite: false });
+MAT.steel = std(0xd8dce0, 0.32, 0.65);
+MAT.steelDark = std(0x4a5056, 0.45, 0.6);
+MAT.edge = std(0x3c4146, 0.6, 0.2);
+MAT.soffit = std(0x9ca2a8, 0.8, 0.05, { emissive: 0xfff1d6, emissiveIntensity: 0 });
+MAT.canopyTop = std(0xc7cacc, 0.55, 0.25);
+MAT.roof = std(0xa9aba9, 0.95);
+MAT.roofDark = std(0x85888b, 0.95);
+MAT.metalRoof = std(0xb9bec2, 0.45, 0.55);
+MAT.vault = std(0xc3ccd3, 0.42, 0.45);
+MAT.hip = std(0x6b4a3d, 0.85);
+MAT.paving = std(0xffffff, 0.95, 0, { map: TEX.paving });
+MAT.plaza = std(0xffffff, 0.92, 0, { map: TEX.plaza });
+MAT.asphalt = std(0xffffff, 0.95, 0, { map: TEX.asphalt });
+MAT.sidewalk = std(0xbcb7ad, 0.95);
+MAT.curb = std(0xd6d3cc, 0.9);
+MAT.grass = std(0xffffff, 1, 0, { map: TEX.grass });
+MAT.ground = std(0xa3ad8e, 1);
+MAT.water = std(0x5fb0cc, 0.04, 0.15, { transparent: true, opacity: 0.9, emissive: 0x2a8fb5, emissiveIntensity: 0 });
+MAT.stone = std(0x5f6266, 0.6);
+MAT.pink = std(0xe2589c, 0.42, 0.05, { emissive: 0xff5fa8, emissiveIntensity: 0 });
+MAT.solar = std(0xffffff, 0.28, 0.55, { map: TEX.solar });
+MAT.green = std(0x4c7637, 1);
+MAT.foliage = std(0xffffff, 0.95);
+MAT.flower = std(0xc23b3b, 0.9);
+MAT.yellow = std(0xe3c15a, 0.85);
+MAT.blue = std(0x2459b3, 0.55);
+MAT.mark = std(0xf3f3ee, 0.8);
+MAT.markY = std(0xe8c54a, 0.8);
+MAT.ctx = std(0xeef0f0, 0.9, 0, { transparent: true, opacity: 0.5 });
+MAT.ctxRoof = std(0xdfe2e2, 0.95, 0, { transparent: true, opacity: 0.5 });
+MAT.ring = new THREE.MeshStandardMaterial({ map: TEX.ring, transparent: true, roughness: 0.6, emissive: 0xffffff, emissiveIntensity: 0, emissiveMap: TEX.ring });
+for (const k of Object.keys(FAC)) {
+  MAT['fac_' + k] = std(0xffffff, 0.85, 0, { map: FAC[k].map, emissive: 0xffffff, emissiveMap: FAC[k].glow, emissiveIntensity: 0 });
+}
+const GLOWABLE = [MAT.glassDark, MAT.fac_ribbon, MAT.fac_brick, MAT.fac_tower, MAT.fac_yellow];
+
+// ---------------------------------------------------------------- geometry helpers
+// axis-aligned box in plan coords, UVs in metres (u along the face, v = height)
+const FACES = ['px', 'nx', 'py', 'ny', 'pz', 'nz'];
+function boxGeo(x0, y0, z0, x1, y1, z1, faces = FACES) {
+  const pos = [], nor = [], uv = [], idx = [];
+  const add = (a, b, c, d, n, uvs) => {
+    const i = pos.length / 3;
+    for (const p of [a, b, c, d]) pos.push(...p);
+    for (let k = 0; k < 4; k++) nor.push(...n);
+    uv.push(...uvs);
+    idx.push(i, i + 1, i + 2, i, i + 2, i + 3);
+  };
+  for (const f of faces) {
+    if (f === 'px') add([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [1, 0, 0], [-z1, y0, -z0, y0, -z0, y1, -z1, y1]);
+    if (f === 'nx') add([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [-1, 0, 0], [z0, y0, z1, y0, z1, y1, z0, y1]);
+    if (f === 'pz') add([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1], [x0, y0, x1, y0, x1, y1, x0, y1]);
+    if (f === 'nz') add([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [0, 0, -1], [-x1, y0, -x0, y0, -x0, y1, -x1, y1]);
+    if (f === 'py') add([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], [0, 1, 0], [x0, -z1, x1, -z1, x1, -z0, x0, -z0]);
+    if (f === 'ny') add([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], [0, -1, 0], [x0, z0, x1, z0, x1, z1, x0, z1]);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  return g;
+}
+// planar polygon (convex quad / triangle) from points, facing roughly `hint`
+function polyGeo(pts, hint) {
+  const a = new THREE.Vector3(...pts[0]), b = new THREE.Vector3(...pts[1]), c = new THREE.Vector3(...pts[2]);
+  let n = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a)).normalize();
+  if (hint && n.dot(new THREE.Vector3(...hint)) < 0) { pts = pts.slice().reverse(); n.negate(); }
+  const pos = [], nor = [], uv = [], idx = [];
+  // u along first edge, v along y (or z for flat faces)
+  const e = new THREE.Vector3(...pts[1]).sub(new THREE.Vector3(...pts[0])); e.y = 0;
+  const eLen = e.length() || 1; e.divideScalar(eLen);
+  for (const p of pts) {
+    pos.push(...p); nor.push(n.x, n.y, n.z);
+    if (Math.abs(n.y) > 0.7) uv.push(p[0], -p[2]); else uv.push(p[0] * e.x + p[2] * e.z, p[1]);
+  }
+  for (let i = 1; i < pts.length - 1; i++) idx.push(0, i, i + 1);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  return g;
+}
+function toIndexedStd(g) { // make any geometry merge-compatible (position/normal/uv, indexed)
+  if (!g.index) { const n = g.attributes.position.count; g.setIndex([...Array(n).keys()]); }
+  for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+  if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+  return g;
+}
+
+// collects geometry per material for one pickable building, merged at the end
+class Builder {
+  constructor(id) { this.id = id; this.parts = new Map(); this.extra = []; }
+  add(mat, geo) { if (!this.parts.has(mat)) this.parts.set(mat, []); this.parts.get(mat).push(toIndexedStd(geo)); return this; }
+  box(mat, x0, y0, z0, x1, y1, z1, faces) { return this.add(mat, boxGeo(Math.min(x0, x1), Math.min(y0, y1), Math.min(z0, z1), Math.max(x0, x1), Math.max(y0, y1), Math.max(z0, z1), faces)); }
+  // walls with one material, roof with another
+  mass(wallMat, roofMat, x0, y0, z0, x1, y1, z1) {
+    this.box(wallMat, x0, y0, z0, x1, y1, z1, ['px', 'nx', 'pz', 'nz']);
+    if (roofMat) this.box(roofMat, x0, y0, z0, x1, y1, z1, ['py']);
+    return this;
+  }
+  parapet(mat, x0, z0, x1, z1, y, h = 1.1, t = 0.3) {
+    this.box(mat, x0, y, z0, x1, y + h, z0 + t); this.box(mat, x0, y, z1 - t, x1, y + h, z1);
+    this.box(mat, x0, y, z0 + t, x0 + t, y + h, z1 - t); this.box(mat, x1 - t, y, z0 + t, x1, y + h, z1 - t);
+    return this;
+  }
+  poly(mat, pts, hint) { return this.add(mat, polyGeo(pts, hint)); }
+  // prism along a plan segment a->b (x,z), from y0 to y1, spanning offsets o0..o1 along the segment's left normal
+  seg(mat, a, b, y0, y1, o0, o1, ends = true) {
+    const dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), nx = dz / L, nz = -dx / L; // normal pointing to the right of a->b when looking down (x east, z south)
+    const P = (p, o, y) => [p[0] + nx * o, y, p[1] + nz * o];
+    const A0 = P(a, o0, y0), B0 = P(b, o0, y0), A1 = P(a, o1, y0), B1 = P(b, o1, y0);
+    const A0t = P(a, o0, y1), B0t = P(b, o0, y1), A1t = P(a, o1, y1), B1t = P(b, o1, y1);
+    this.poly(mat, [A1, B1, B1t, A1t], [nx, 0, nz]);
+    this.poly(mat, [B0, A0, A0t, B0t], [-nx, 0, -nz]);
+    this.poly(mat, [A0t, B0t, B1t, A1t], [0, 1, 0]);
+    this.poly(mat, [A0, B0, B1, A1], [0, -1, 0]);
+    if (ends) { this.poly(mat, [A0, A1, A1t, A0t], [-dx, 0, -dz]); this.poly(mat, [B1, B0, B0t, B1t], [dx, 0, dz]); }
+    return this;
+  }
+  mesh(m) { this.extra.push(m); return this; }
+  finish(parent = site, { cast = true, receive = true } = {}) {
+    const grp = new THREE.Group(); grp.userData.id = this.id;
+    for (const [mat, geos] of this.parts) {
+      const g = mergeGeometries(geos, false);
+      const mesh = new THREE.Mesh(g, mat);
+      mesh.castShadow = cast && !mat.transparent; mesh.receiveShadow = receive;
+      grp.add(mesh);
+    }
+    for (const m of this.extra) grp.add(m);
+    parent.add(grp);
+    return grp;
+  }
+}
+
+// instanced batches
+const _q = new THREE.Quaternion(), _e = new THREE.Euler(), _up = new THREE.Vector3(0, 1, 0);
+function TRS(x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
+  _e.set(rx, ry, rz); _q.setFromEuler(_e);
+  return new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), _q.clone(), new THREE.Vector3(sx, sy, sz));
+}
+function SEG(a, b, r) { // unit cylinder (r=1,h=1) stretched between plan points a,b
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+  const d = new THREE.Vector3().subVectors(B, A); const len = d.length();
+  const q = new THREE.Quaternion().setFromUnitVectors(_up, d.normalize());
+  return new THREE.Matrix4().compose(A.add(B).multiplyScalar(0.5), q, new THREE.Vector3(r, len, r));
+}
+class Inst {
+  constructor(geo, mat, { cast = true, receive = true } = {}) { this.geo = geo; this.mat = mat; this.ms = []; this.cs = []; this.cast = cast; this.receive = receive; }
+  push(m, color) { this.ms.push(m); if (color !== undefined) this.cs.push(new THREE.Color(color)); return this; }
+  build(parent = site, id) {
+    if (!this.ms.length) return null;
+    const im = new THREE.InstancedMesh(this.geo, this.mat, this.ms.length);
+    this.ms.forEach((m, i) => im.setMatrixAt(i, m));
+    if (this.cs.length === this.ms.length) this.cs.forEach((c, i) => im.setColorAt(i, c));
+    im.castShadow = this.cast; im.receiveShadow = this.receive;
+    if (id) im.userData.id = id;
+    im.computeBoundingSphere();
+    parent.add(im); return im;
+  }
+}
+const GEO = {
+  cyl: new THREE.CylinderGeometry(1, 1, 1, 10, 1),
+  cyl6: new THREE.CylinderGeometry(1, 1, 1, 6, 1),
+  box: new THREE.BoxGeometry(1, 1, 1),
+  crown: new THREE.IcosahedronGeometry(1, 1),
+  sphere: new THREE.SphereGeometry(1, 12, 8),
+};
+// shared instanced batches (built at the end)
+const B_STEEL = new Inst(GEO.cyl6, MAT.steel);            // lattice members
+const B_STEELD = new Inst(GEO.cyl6, MAT.steelDark);       // struts / rods
+const B_COL = new Inst(GEO.cyl, MAT.white);               // round columns
+const B_SOLAR = new Inst(GEO.box, MAT.solar, { cast: false });
+const B_GREEN = new Inst(GEO.crown, MAT.foliage, { cast: true });
+const B_FLOWER = new Inst(GEO.box, MAT.flower, { cast: false });
+const B_PLANTER = new Inst(GEO.box, MAT.white2, { cast: false });
+function solarArray(x0, z0, x1, z1, y, tilt = 0.17) { // rows run east-west, panels 1 x 1.7 m
+  for (let z = z0 + 1; z <= z1 - 0.9; z += 2.1)
+    for (let x = x0 + 0.6; x <= x1 - 0.6; x += 1.08)
+      B_SOLAR.push(TRS(x, y + 0.45, z, -tilt, 0, 0, 1.02, 0.05, 1.7));
+}
+function shrubRow(x0, z0, x1, z1, y, step = 2.2, s = 0.75) {
+  const len = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(len / step));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t;
+    B_GREEN.push(TRS(x, y + s * 0.6, z, 0, RNG() * 6, 0, s * rand(0.8, 1.2), s * rand(0.7, 1), s * rand(0.8, 1.2)), new THREE.Color().setHSL(rand(0.24, 0.3), rand(0.35, 0.5), rand(0.28, 0.38)));
+  }
+}
+
+// ---- 10_env.js
+// ---------------------------------------------------------------- sky (gradient + sun + soft clouds), sun light, environment
+const SKY_VS = `varying vec3 vDir;
+void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vDir = wp.xyz - cameraPosition;
+  gl_Position = projectionMatrix * viewMatrix * wp; gl_Position.z = gl_Position.w; }`;
+const SKY_FS = `uniform vec3 uZenith; uniform vec3 uHorizon; uniform vec3 uGround; uniform vec3 uSunDir; uniform vec3 uSunColor; uniform vec3 uCloudTint; uniform float uCloud; uniform float uTime;
+varying vec3 vDir;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++){ v += a * noise(p); p = p * 2.03 + 17.1; a *= 0.5; } return v; }
+void main(){
+  vec3 d = normalize(vDir); float h = d.y;
+  vec3 col = mix(uHorizon, uZenith, pow(clamp(h, 0.0, 1.0), 0.5));
+  float s = max(dot(d, uSunDir), 0.0);
+  col += uSunColor * (pow(s, 1400.0) * 8.0 + pow(s, 16.0) * 0.22 + pow(s, 3.0) * 0.06);
+  if (uCloud > 0.0 && h > 0.0) {
+    vec2 uv = d.xz / (h + 0.1) * 1.3 + vec2(uTime * 0.003, uTime * 0.001);
+    float c = fbm(uv);
+    float cov = smoothstep(0.56 - uCloud * 0.16, 0.86, c);
+    float lit = fbm(uv + uSunDir.xz * 0.06);
+    vec3 cc = uCloudTint * mix(0.78, 1.05, smoothstep(0.35, 0.75, c - lit + 0.5));
+    col = mix(col, cc, cov * smoothstep(0.0, 0.2, h) * 0.92);
+  }
+  col = mix(col, uGround, smoothstep(0.0, -0.06, h));
+  gl_FragColor = vec4(col, 1.0);
+  #include <colorspace_fragment>
+}`;
+function skyMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: SKY_VS, fragmentShader: SKY_FS, side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false,
+    uniforms: { uZenith: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uGround: { value: new THREE.Color() },
+      uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunColor: { value: new THREE.Color() }, uCloudTint: { value: new THREE.Color() },
+      uCloud: { value: 1 }, uTime: { value: 0 } },
+  });
+}
+const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 16), skyMaterial());
+sky.renderOrder = -1; sky.frustumCulled = false;
+scene.add(sky);
+const envSkyMat = skyMaterial();
+const envScene = new THREE.Scene();
+envScene.add(new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16), envSkyMat));
+const pmrem = new THREE.PMREMGenerator(renderer);
+let envRT = null;
+TICKERS.push(t => { sky.material.uniforms.uTime.value = t; });
+
+const sun = new THREE.DirectionalLight(0xfff4e2, 3.2);
+sun.castShadow = true;
+sun.shadow.mapSize.set(SMALL ? 2048 : 4096, SMALL ? 2048 : 4096);
+const SB = 165;
+Object.assign(sun.shadow.camera, { left: -SB, right: SB, top: SB, bottom: -SB, near: 10, far: 900 });
+sun.shadow.bias = -0.0003;
+sun.shadow.normalBias = 0.5;
+scene.add(sun, sun.target);
+const hemi = new THREE.HemisphereLight(0xd6e8f7, 0x8d8a78, 0.55);
+scene.add(hemi);
+const fill = new THREE.DirectionalLight(0xdfe9f5, 0.55); // soft bounce from the west so shaded facades keep their detail
+fill.position.set(-300, 190, 90);
+scene.add(fill);
+scene.fog = new THREE.Fog(0xc9dfec, 450, 2600);
+
+const SKY_DAY = { el: 56, az: 42, zenith: '#2369c4', horizon: '#c6e2f3', ground: '#c9dfec', sunCol: '#fff1d6', cloud: 1, cloudTint: '#ffffff',
+  exposure: 0.95, sun: 0xfff4e2, sunI: 2.8, hemiI: 0.6, fillI: 1.0, fog: 0xc9dfec, env: 0.85 };
+const SKY_DUSK = { el: 5, az: 262, zenith: '#2a3f74', horizon: '#f4a566', ground: '#c99a86', sunCol: '#ffb36b', cloud: 1.1, cloudTint: '#f5b590',
+  exposure: 1.05, sun: 0xffa463, sunI: 2.2, hemiI: 0.5, fillI: 0.18, fog: 0xc99a86, env: 0.8 };
+function applySky(p) {
+  const dir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - p.el), Math.PI - THREE.MathUtils.degToRad(p.az));
+  for (const m of [sky.material, envSkyMat]) {
+    const U = m.uniforms;
+    U.uZenith.value.set(p.zenith); U.uHorizon.value.set(p.horizon); U.uGround.value.set(p.ground);
+    U.uSunColor.value.set(p.sunCol); U.uCloudTint.value.set(p.cloudTint); U.uCloud.value = p.cloud; U.uSunDir.value.copy(dir);
+  }
+  envSkyMat.uniforms.uCloud.value = 0.0;
+  sun.position.copy(dir).multiplyScalar(420);
+  sun.target.position.set(0, 0, 0);
+  sun.color.set(p.sun); sun.intensity = p.sunI;
+  hemi.intensity = p.hemiI; fill.intensity = p.fillI;
+  renderer.toneMappingExposure = p.exposure;
+  scene.fog.color.set(p.fog);
+  if (envRT) envRT.dispose();
+  envRT = pmrem.fromScene(envScene, 0.03, 0.1, 100);
+  scene.environment = envRT.texture;
+  scene.environmentIntensity = p.env;
+}
+applySky(SKY_DAY);
+
+// ---------------------------------------------------------------- ground, roads, paving
+function flat(mat, x0, z0, x1, z1, y = 0, id) {
+  const b = new Builder(id || 'ground');
+  b.box(mat, x0, y - 0.05, z0, x1, y, z1, ['py']);
+  const g = b.finish(site, { cast: false, receive: true });
+  return g;
+}
+const GROUND_PLANE = new THREE.Mesh(new THREE.CircleGeometry(5200, 64), MAT.ground);
+GROUND_PLANE.rotation.x = -Math.PI / 2; GROUND_PLANE.position.y = -0.12; GROUND_PLANE.receiveShadow = true;
+scene.add(GROUND_PLANE);
+const GROUND = new Builder('ground');
+// main road: ถนนฉลองกรุง (north); two carriageways with a planted median
+GROUND.box(MAT.asphalt, RX0, -0.1, -8, RX1, 0.0, 15.5, ['py']);
+GROUND.box(MAT.curb, RX0, 0, 2.8, RX1, 0.18, 4.2);
+GROUND.box(MAT.grass, RX0, 0.0, 3.0, RX1, 0.2, 4.0, ['py']);
+GROUND.box(MAT.sidewalk, RX0, -0.1, 15.5, RX1, 0.15, 20, ['py', 'pz', 'nz']);
+GROUND.box(MAT.sidewalk, RX0, -0.1, -13, RX1, 0.15, -8, ['py', 'pz', 'nz']);
+// west soi (ซอยฉลองกรุง 1), east driveway, south lane, railway
+GROUND.box(MAT.asphalt, 20, -0.1, 20, 31, 0.0, 214, ['py']);
+GROUND.box(MAT.asphalt, 132, -0.1, 20, 141, 0.0, 214, ['py']);
+GROUND.box(MAT.asphalt, 20, -0.1, 198, 141, 0.0, 211, ['py']);
+GROUND.box(MAT.sidewalk, 20, -0.1, 211, 141, 0.12, 214, ['py', 'pz']);
+GROUND.box(MAT.roofDark, RX0, -0.1, 214, RX1, 0.25, 244, ['py', 'nz']);
+for (const z of [219, 220.5, 226, 227.5, 233, 234.5, 239, 240.5]) GROUND.box(MAT.steelDark, RX0, 0.25, z - 0.04, RX1, 0.42, z + 0.04);
+// site base (light paving)
+GROUND.box(MAT.paving, 31, -0.1, 20, 132, 0.02, 198, ['py']);
+// front plaza (argyle paving) + paving under the canopy
+GROUND.box(MAT.plaza, 88.5, 0.03, 30, 131.5, 0.08, 57.5, ['py']);
+GROUND.box(MAT.paving, 50, 0.03, 20, 88.5, 0.08, 57.5, ['py']);
+// green strips
+GROUND.box(MAT.grass, 52, 0.03, 20, 131.5, 0.12, 29.4, ['py', 'pz']);
+GROUND.box(MAT.grass, 31, 0.03, 76.5, 39.5, 0.09, 198, ['py']);
+GROUND.box(MAT.grass, 75, 0.03, 104, 88, 0.09, 133, ['py']);
+GROUND.box(MAT.grass, 54, 0.05, 108.5, 69, 0.09, 117, ['py']);
+GROUND.box(MAT.grass, 39.5, 0.03, 166, 47, 0.09, 198, ['py']);
+GROUND.box(MAT.grass, 127.5, 0.03, 104, 132, 0.09, 198, ['py']);
+// lane markings
+for (const z of [-4.4, -0.8, 8, 11.8]) for (let x = RX0 + 20; x < RX1 - 20; x += 9) GROUND.box(MAT.mark, x, 0.0, z - 0.08, x + 4.5, 0.045, z + 0.08, ['py']);
+for (const z of [-7.4, 2.5, 4.5, 14.9]) GROUND.box(MAT.mark, RX0 + 10, 0.0, z - 0.08, RX1 - 10, 0.045, z + 0.08, ['py']);
+for (let i = 0; i < 5; i++) GROUND.box(MAT.mark, 133 + i * 1.7, 0.0, 16, 134 + i * 1.7, 0.045, 19.5, ['py']);
+GROUND.finish(site, { cast: false, receive: true });
+
+// context massing around the faculty (muted, unlabeled)
+if (!EXPORT) {
+  const C = new Builder('context');
+  const ctx = (x0, z0, x1, z1, h) => { C.mass(MAT.ctx, MAT.ctxRoof, x0, 0, z0, x1, h, z1); };
+  ctx(-38, 30, 13, 70, 18); ctx(-38, 82, 13, 150, 21); ctx(-38, 158, 13, 200, 14);   // คณะวิทยาศาสตร์ across the soi
+  ctx(146, 64, 200, 86, 13); ctx(147, 100, 176, 160, 15); ctx(146, 166, 172, 200, 10); // east of the driveway
+  ctx(-40, -64, 20, -26, 9); ctx(40, -70, 100, -28, 12); ctx(118, -64, 176, -28, 7); // north of the road
+  C.finish(site, { cast: true, receive: true });
+  const pond = new Builder('context');
+  pond.box(MAT.grass, 142, 0.02, 20, 184, 0.1, 60, ['py']);
+  pond.box(MAT.water, 146, 0.02, 24, 178, 0.14, 55, ['py']);
+  pond.finish(site, { cast: false });
+}
+
+// ---- 20_tower.js
+// ================================================================ อาคารนวัตกรรมการเรียนรู้ (11F), steel lattice, entrance canopy, podium
+// plan coordinates measured from Google satellite imagery (0.145 m/px mosaic), metres; x = east, z = south
+const INFO = {};
+const LABELS = [];
+function register(id, name, meta, lines, labelPos, view) { INFO[id] = { name, meta, lines, view }; if (labelPos) LABELS.push({ id, name, pos: labelPos }); }
+
+const TW = { X0: 31.5, ZN: 21, ZS: 52, NE: [50.5, 21], SE: [56, 52], PL: 1.2, G: 6.0, FH: 3.8, NF: 10, LEAN: 0.3 };
+TW.ROOF = TW.G + TW.NF * TW.FH; // 44.0
+const eastX = z => TW.NE[0] + (z - TW.NE[1]) * (TW.SE[0] - TW.NE[0]) / (TW.SE[1] - TW.NE[1]); // x of the angled east face at z
+
+// sawtooth "shingle" facade: angled white blades with slit windows, each storey leaning out
+// face 'w': wall at x = wall (outward -x), runs along z;  face 'n': wall at z = wall (outward -z), runs along x
+// lean: extra outward offset per storey (cumulative), used on the north face that cantilevers toward the road
+function sawtooth(B, face, wall, t0, t1, nb, floors, { pB = 0.28, pT = 0.85, g = 0.34, slab = 1.05, lean = 0, flip = false } = {}) {
+  const b = (t1 - t0) / nb;
+  floors.forEach(([y0f, y1f], fi) => {
+    const w = wall - lean * (fi + 1);
+    const P3 = (t, y, n) => face === 'w' ? [w - n, y, t] : [t, y, w - n];
+    const hintS = face === 'w' ? [-1, 0, -0.4] : [-0.4, 0, -1];
+    const hintG = face === 'w' ? [-0.6, 0, 1] : [1, 0, -0.6];
+    const y0 = y0f, y1 = y1f - 0.22;
+    for (let j = 0; j < nb; j++) {
+      const a = t0 + j * b, c = a + b;
+      if (!flip) {
+        B.poly(MAT.white, [P3(a, y0, 0), P3(c - g, y0, pB), P3(c - g, y1, pT), P3(a, y1, 0)], hintS);
+        B.poly(MAT.glassDark, [P3(c - g, y0, pB), P3(c, y0, 0), P3(c, y1, 0), P3(c - g, y1, pT)], hintG);
+      } else { // slit glazing faces the start of the run, white blades face the end
+        const hS = face === 'w' ? [-1, 0, 0.4] : [0.4, 0, -1], hG = face === 'w' ? [-0.6, 0, -1] : [-1, 0, -0.6];
+        B.poly(MAT.glassDark, [P3(a, y0, 0), P3(a + g, y0, pB), P3(a + g, y1, pT), P3(a, y1, 0)], hG);
+        B.poly(MAT.white, [P3(a + g, y0, pB), P3(c, y0, 0), P3(c, y1, 0), P3(a + g, y1, pT)], hS);
+      }
+    }
+    const y = y1f;
+    if (face === 'w') {
+      B.box(MAT.white, w - slab, y - 0.22, t0 - (slab - 0.9), w, y, t1);
+      B.box(MAT.edge, w - slab - 0.05, y - 0.3, t0 - (slab - 0.9), w - slab, y + 0.02, t1);
+    } else {
+      B.box(MAT.white, t0, y - 0.22, w - slab, t1, y, wall + 0.3);
+      B.box(MAT.edge, t0, y - 0.3, w - slab - 0.05, t1, y + 0.02, w - slab);
+    }
+  });
+  if (face === 'w') { const y = floors[0][0]; B.box(MAT.white, wall - slab, y - 0.22, t0 - (slab - 0.9), wall, y, t1); }
+  else { const y = floors[0][0]; B.box(MAT.white, t0, y - 0.22, wall - slab, t1, y, wall + 0.3); }
+}
+
+{
+  const { X0, ZN, ZS, NE, SE, PL, G, FH, NF, ROOF, LEAN } = TW;
+  const T = new Builder('tower');
+  const floors = []; for (let f = 0; f < NF; f++) floors.push([G + f * FH, G + (f + 1) * FH]);
+  const ZW = ZN + 3.0; // north wall of the core (ground floor line); upper storeys step out toward the road
+  // plinth / entrance deck under the tower and canopy
+  T.poly(MAT.granite, [[X0 - 1.2, PL, ZN + 1.5], [eastX(ZN) + 7, PL, ZN + 1.5], [eastX(ZS) + 7.5, PL, ZS + 3], [X0 - 1.2, PL, ZS + 3]], [0, 1, 0]);
+  T.box(MAT.granite, X0 - 1.2, 0, ZN + 1.5, X0 - 1.0, PL, ZS + 3);
+  // core (angled east face)
+  const c0 = [X0 + 0.9, ZW], c1 = [eastX(ZW) - 0.6, ZW], c2 = [eastX(ZS) - 0.6, ZS], c3 = [X0 + 0.9, ZS];
+  const wall = (a, b, y0, y1, mat, hint) => T.poly(mat, [[a[0], y0, a[1]], [b[0], y0, b[1]], [b[0], y1, b[1]], [a[0], y1, a[1]]], hint);
+  wall(c0, c1, G, ROOF, MAT.fac_tower, [0, 0, -1]); wall(c1, c2, G, ROOF, MAT.fac_tower, [1, 0, -0.18]);
+  wall(c2, c3, G, ROOF, MAT.fac_tower, [0, 0, 1]); wall(c3, c0, G, ROOF, MAT.fac_tower, [-1, 0, 0]);
+  T.poly(MAT.white, [[c0[0], G, c0[1]], [c1[0], G, c1[1]], [c2[0], G, c2[1]], [c3[0], G, c3[1]]], [0, -1, 0]);
+  // top floor plate projects to the satellite roof outline (north edge at ZN)
+  T.poly(MAT.roof, [[X0, ROOF, ZN], [eastX(ZN), ROOF, ZN], [eastX(ZS), ROOF, ZS], [X0, ROOF, ZS]], [0, 1, 0]);
+  // ground floor: recessed glazing, perimeter columns
+  const g0 = [X0 + 2.4, ZW + 1.6], g1 = [eastX(ZW) - 3.0, ZW + 1.6], g2 = [eastX(ZS) - 3.0, ZS - 0.2], g3 = [X0 + 2.4, ZS - 0.2];
+  wall(g0, g1, PL, G, MAT.glassDark, [0, 0, -1]); wall(g1, g2, PL, G, MAT.glassDark, [1, 0, -0.18]); wall(g3, g0, PL, G, MAT.glassDark, [-1, 0, 0]);
+  for (const z of [ZW + 1, 31, 38, 45]) B_COL.push(TRS(eastX(z) - 1.4, (PL + G) / 2, z, 0, 0, 0, 0.42, G - PL, 0.42));
+  for (const x of [X0 + 1.3, 38.5, 45]) B_COL.push(TRS(x, (PL + G) / 2, ZW + 0.9, 0, 0, 0, 0.42, G - PL, 0.42));
+  for (const z of [30, 38, 46]) B_COL.push(TRS(X0 + 1.1, (PL + G) / 2, z, 0, 0, 0, 0.42, G - PL, 0.42));
+  // west and north shingled facades (north one leans out over the sidewalk, ~3 m at the top)
+  sawtooth(T, 'w', X0 + 0.9, ZW, ZS - 1.6, 22, floors, { g: 0.26, pB: 0.22, pT: 0.7 });
+  sawtooth(T, 'n', ZW, X0 - 0.1, eastX(ZN) - 2.6, 14, floors, { lean: LEAN, g: 0.26, pB: 0.22, pT: 0.7 });
+  // vertical white blades: NE corner (leaning with the facade), south end of west face, glass/white divider on east face
+  for (let f = 0; f < NF; f++) {
+    const y0 = G + f * FH, y1 = y0 + FH, zf = ZW - LEAN * (f + 1);
+    T.box(MAT.white, eastX(ZN) - 2.6, y0, zf - 0.45, eastX(ZN) + 0.45, y1, ZW + 1.6);
+  }
+  T.box(MAT.white, eastX(ZN) - 2.6, PL, ZW - 0.2, eastX(ZN) + 0.45, G, ZW + 1.6);
+  T.box(MAT.white, X0 - 1.35, 0, ZS - 1.6, X0 + 1.3, ROOF + 1.5, ZS + 0.2);
+  const zDiv = 39.5;
+  T.seg(MAT.white, [eastX(zDiv - 0.4), zDiv - 0.4], [eastX(zDiv + 0.4), zDiv + 0.4], G, ROOF + 1.2, -0.6, 1.6);
+  // east face, north part: glass curtain wall with mullions and floor bands
+  const a = [eastX(ZN + 1.6), ZN + 1.6], bq = [eastX(zDiv - 0.4), zDiv - 0.4];
+  T.seg(MAT.glass, a, bq, G, ROOF, -0.6, -0.3, false);
+  const nM = Math.round((zDiv - ZN - 2) / 1.55);
+  for (let i = 1; i < nM; i++) { const z = ZN + 1.6 + i * (zDiv - 0.4 - ZN - 1.6) / nM; T.seg(MAT.steel, [eastX(z - 0.06), z - 0.06], [eastX(z + 0.06), z + 0.06], G, ROOF, -0.3, -0.12); }
+  for (let f = 0; f <= NF; f++) { const y = G + f * FH; T.seg(MAT.white, a, bq, y - 0.55, y + 0.1, -0.6, 0.35); }
+  T.seg(MAT.white, [eastX(24), 24], [eastX(37), 37], 13.75, 14.05, 0, 2.3);                      // balcony (3rd floor)
+  T.seg(MAT.glassRail, [eastX(24), 24], [eastX(37), 37], 14.05, 15.15, 2.15, 2.25);
+  T.seg(MAT.blue, [eastX(27), 27], [eastX(34), 34], 14.2, 15.0, 2.26, 2.32);
+  // east face, south part: white wall with deep balconies
+  const s0 = [eastX(zDiv + 0.4), zDiv + 0.4], s1 = [eastX(ZS - 0.2), ZS - 0.2];
+  for (let f = 0; f <= NF; f++) {
+    const y = G + f * FH;
+    T.seg(MAT.white, s0, s1, y - 0.22, y, -0.6, 1.3);
+    if (f < NF && f % 2 === 1) T.seg(MAT.white, s0, s1, y, y + 1.0, 1.0, 1.3);
+  }
+  // roof: parapet, pergola grid, terrace benches, lift core
+  T.box(MAT.white, X0, ROOF, ZN, eastX(ZN), ROOF + 1.25, ZN + 0.3);
+  T.box(MAT.white, X0, ROOF, ZS - 0.3, eastX(ZS), ROOF + 1.25, ZS);
+  T.box(MAT.white, X0, ROOF, ZN, X0 + 0.3, ROOF + 1.25, ZS);
+  T.seg(MAT.white, [eastX(ZN), ZN], [eastX(ZS), ZS], ROOF, ROOF + 1.25, -0.3, 0, true);
+  for (let x = X0 + 2; x <= 44; x += 1.1) T.box(MAT.white2, x, ROOF + 3.0, ZN + 2, x + 0.18, ROOF + 3.25, 34);
+  for (let z = ZN + 2; z <= 34; z += 2.2) T.box(MAT.white2, X0 + 1.6, ROOF + 3.25, z, 44.2, ROOF + 3.45, z + 0.18);
+  for (const [x, z] of [[X0 + 1.7, ZN + 2], [44, ZN + 2], [X0 + 1.7, 34], [44, 34]]) T.box(MAT.white2, x, ROOF, z, x + 0.3, ROOF + 3.25, z + 0.3);
+  for (let i = 0; i < 5; i++) T.mass(MAT.white2, MAT.roofDark, X0 + 2 + i * 2.2, ROOF, 36.5, X0 + 3.2 + i * 2.2, ROOF + 0.8, 50);
+  T.mass(MAT.white, MAT.roof, 45, ROOF, 39, eastX(45) - 1.5, ROOF + 3.6, 51);
+  T.finish();
+
+  // ------------------------------------------------ steel lattice: vertical above the roof, sweeping down to the canopy's east edge
+  const LZ = [23, 30, 37, 44, 51], XE = 88.5, YB = 14.6, NSEG = 11;
+  const profFor = z => {
+    const xT = eastX(z) + 1.2, a = XE - xT, b = ROOF - YB;
+    const pr = [[xT, 51.5], [xT, (51.5 + ROOF) / 2]];
+    for (let s = 0; s <= NSEG; s++) { const t = (s / NSEG) * Math.PI / 2; pr.push([XE - a * Math.cos(t), ROOF - b * Math.sin(t)]); }
+    return pr;
+  };
+  const PR = LZ.map(profFor);
+  const NP = PR[0].length;
+  for (let k = 0; k < LZ.length; k++) for (let s = 0; s < NP - 1; s++)
+    B_STEEL.push(SEG([PR[k][s][0], PR[k][s][1], LZ[k]], [PR[k][s + 1][0], PR[k][s + 1][1], LZ[k]], 0.3));
+  for (let s = 0; s < NP; s++) for (let k = 0; k < LZ.length - 1; k++)
+    B_STEEL.push(SEG([PR[k][s][0], PR[k][s][1], LZ[k]], [PR[k + 1][s][0], PR[k + 1][s][1], LZ[k + 1]], s === 0 ? 0.32 : 0.2));
+  for (let s = 0; s < NP - 1; s++) for (let k = 0; k < LZ.length - 1; k++) {
+    B_STEEL.push(SEG([PR[k][s][0], PR[k][s][1], LZ[k]], [PR[k + 1][s + 1][0], PR[k + 1][s + 1][1], LZ[k + 1]], 0.13));
+    B_STEEL.push(SEG([PR[k + 1][s][0], PR[k + 1][s][1], LZ[k + 1]], [PR[k][s + 1][0], PR[k][s + 1][1], LZ[k]], 0.13));
+  }
+  for (const z of LZ) for (const y of [ROOF, 38]) B_STEELD.push(SEG([eastX(z) + 0.1, y, z], [eastX(z) + 1.1, y, z], 0.14));
+
+  // ------------------------------------------------ entrance canopy on tree columns, stairs
+  const E = new Builder('tower');
+  for (const cv of [[[eastX(ZN), ZN], [XE + 0.6, ZN], [XE + 0.6, 50], [eastX(50), 50]], [[66.2, 50], [XE + 0.6, 50], [XE + 0.6, 57], [66.2, 57]]]) {
+    E.poly(MAT.canopyTop, cv.map(([x, z]) => [x, 14.4, z]), [0, 1, 0]);
+    E.poly(MAT.soffit, cv.map(([x, z]) => [x, 13.7, z]), [0, -1, 0]);
+  }
+  E.box(MAT.edge, XE + 0.6, 13.65, ZN, XE + 0.85, 14.5, 57);
+  E.box(MAT.soffit, eastX(ZN) + 1, 13.7, ZN - 0.25, XE + 0.6, 14.4, ZN);
+  E.box(MAT.soffit, 66.2, 13.7, 57, XE + 0.6, 14.4, 57.25);
+  E.box(MAT.soffit, 66, 13.7, 50, 66.2, 14.4, 57);
+  for (const x of [66.5, 81.5]) for (const z of [24.5, 31.5, 38.5, 45.5, 52.5]) {
+    B_COL.push(TRS(x, 5.6, z, 0, 0, 0, 0.6, 11.2, 0.6));
+    for (const [dx, dz] of [[2.6, 2.6], [-2.6, 2.6], [2.6, -2.6], [-2.6, -2.6], [0, 3.2], [0, -3.2]]) B_STEELD.push(SEG([x, 11.0, z], [x + dx, 13.7, z + dz], 0.13));
+  }
+  const SX = 59.5, SZ0 = ZN + 1.5, SZ1 = 49.4;
+  E.poly(MAT.granite, [[eastX(SZ0), PL, SZ0], [SX, PL, SZ0], [SX, PL, SZ1], [eastX(SZ1), PL, SZ1]], [0, 1, 0]);
+  E.box(MAT.granite, eastX(SZ0) - 1, 0, SZ0, SX, PL, SZ0 + 0.2, ['nz']);
+  for (let i = 0; i < 8; i++) E.box(MAT.granite, SX + i, 0, SZ0, SX + i + 1, PL * (8 - i) / 9, SZ1);
+  E.box(MAT.granite, SX - 0.5, 0, SZ1, SX + 8, PL + 0.5, SZ1 + 0.6);
+  E.finish();
+
+  // ------------------------------------------------ podium south of the tower: 6F wing, 3F roof-garden block, stepped terraces
+  const Pd = new Builder('podium');
+  const PH1 = G + 5 * FH; // 25.0
+  const P1z = [ZS, 58];
+  Pd.box(MAT.granite, X0 - 1.2, 0, P1z[0], 52.5, PL, P1z[1]);
+  Pd.box(MAT.fac_ribbon, X0 + 0.9, PL, P1z[0], 52.5, PH1, P1z[1], ['px', 'pz']);
+  Pd.box(MAT.roof, X0 + 0.9, PL, P1z[0], 52.5, PH1, P1z[1], ['py']);
+  Pd.box(MAT.white, X0 + 0.9, PL, P1z[0], 52.5, PH1, P1z[1], ['nx']);
+  const pFloors = []; for (let f = 0; f < 5; f++) pFloors.push([G + f * FH, G + (f + 1) * FH]);
+  sawtooth(Pd, 'w', X0 + 0.9, P1z[0] + 0.2, P1z[1], 5, pFloors, { g: 0.26, pB: 0.22, pT: 0.7 });
+  Pd.box(MAT.glassDark, X0 + 0.8, PL, P1z[0] + 0.2, X0 + 0.95, G - 0.25, P1z[1], ['nx']);
+  Pd.parapet(MAT.white, X0 - 0.25, P1z[0], 52.5, P1z[1], PH1, 1.1, 0.3);
+  shrubRow(X0 + 1.5, P1z[1] - 1.2, 51, P1z[1] - 1.2, PH1, 2.0, 0.8);
+  const PH2 = 4.5 + 2 * FH; // 12.1, three storeys with a roof garden
+  Pd.mass(MAT.fac_ribbon, MAT.roof, X0, 0, 58, 52.5, PH2, 73);
+  Pd.parapet(MAT.white, X0, 58, 52.5, 73, PH2, 1.1, 0.3);
+  shrubRow(X0 + 1.5, 71.6, 51.5, 71.6, PH2, 2.3, 0.85);
+  Pd.mass(MAT.fac_ribbon, MAT.roof, X0 + 1.5, 0, 73, 55, 8.3, 76.5);
+  Pd.parapet(MAT.white, X0 + 1.5, 73, 55, 76.5, 8.3, 1.0, 0.25);
+  const steps = [[52.5, 56, PH1 - 3.8], [56, 59.2, PH1 - 7.6], [59.2, 62.6, PH1 - 11.4], [62.6, 66, PH1 - 15.2]];
+  for (const [xa, xb, h] of steps) {
+    Pd.mass(MAT.fac_ribbon, MAT.roof, xa, 0, 50, xb, h, 77);
+    Pd.box(MAT.white, xb - 0.3, h, 50, xb, h + 1.05, 77);
+    Pd.box(MAT.white, xa, h, 76.7, xb, h + 1.05, 77);
+    shrubRow(xb - 0.9, 51.5, xb - 0.9, 75.5, h, 2.0, 0.8);
+  }
+  Pd.finish();
+
+  register('tower', 'อาคารนวัตกรรมการเรียนรู้', '11 ชั้น · สูงราว 45 ม. · เปิดใช้ปี 2567', [
+    'อาคารเรียนรวมและปฏิบัติการของคณะ สร้างด้วยงบปี 2560 เสร็จปี 2563',
+    'โครงเหล็กถักโค้งจากหลังคาลงมาเป็นหลังคาทางเข้า ด้านถนนเป็นครีบเฉียงที่ยื่นออกทีละชั้น',
+    'ใน Google Maps มีหมุด Maker space SIET และห้องประชุมรูปทรงไข่อยู่ที่อาคารนี้'], [43, ROOF + 7, 36]);
+  register('podium', 'ปีกอาคารขั้นบันได', '2–6 ชั้น · ดาดฟ้าสวน', [
+    'ต่อจากด้านใต้ของอาคารนวัตกรรมการเรียนรู้', 'ลดหลั่นเป็นดาดฟ้าปลูกต้นไม้ลงไปทางทิศตะวันออก'], [45, PH1 + 3, 63]);
+}
+
+// ---- 30_front.js
+// ================================================================ plaza, fountain, letters, brick buildings south of the plaza
+function gable(B, mat, x0, x1, z0, z1, yE, yR, endMat = MAT.white) { // ridge along x
+  const zm = (z0 + z1) / 2;
+  B.poly(mat, [[x0, yE, z0], [x1, yE, z0], [x1, yR, zm], [x0, yR, zm]], [0, 1, -1]);
+  B.poly(mat, [[x0, yR, zm], [x1, yR, zm], [x1, yE, z1], [x0, yE, z1]], [0, 1, 1]);
+  B.poly(endMat, [[x0, yE, z0], [x0, yR, zm], [x0, yE, z1]], [-1, 0, 0]);
+  B.poly(endMat, [[x1, yE, z0], [x1, yR, zm], [x1, yE, z1]], [1, 0, 0]);
+}
+MAT.stoneDS = MAT.stone.clone(); MAT.stoneDS.side = THREE.DoubleSide;
+MAT.vault.side = THREE.DoubleSide;
+MAT.glassDS = MAT.glass.clone(); MAT.glassDS.side = THREE.DoubleSide;
+
+// ---------------------------------------------------------------- plaza
+{
+  const Z = new Builder('plaza');
+  const FX = 125.5, FZ = 46.5;
+  const lathe = (pts, seg = 72) => {
+    const g = new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg);
+    g.translate(FX, 0, FZ); return g;
+  };
+  Z.add(MAT.granite, lathe([[0, 0.14], [5.6, 0.14], [5.6, 0.02]]));
+  Z.add(MAT.stoneDS, lathe([[3.75, 0.1], [3.75, 0.72], [3.35, 0.72], [3.35, 0.3], [2.1, 0.3]]));
+  Z.add(MAT.stoneDS, lathe([[2.1, 0.3], [2.1, 1.22], [1.8, 1.22], [1.8, 0.9], [0.45, 0.9], [0.45, 1.6], [0, 1.6]]));
+  const water = (r, y) => { const g = new THREE.CircleGeometry(r, 64); g.rotateX(-Math.PI / 2); g.translate(FX, y, FZ); return g; };
+  Z.add(MAT.water, water(3.35, 0.56)); Z.add(MAT.water, water(1.8, 1.12));
+  // planter + hedge in front of the red-brick block, potted topiary trees
+  Z.box(MAT.white2, 90.5, 0.08, 55.4, 117, 0.55, 57.1);
+  Z.box(MAT.green, 90.8, 0.55, 55.7, 116.7, 1.35, 56.8);
+  for (let x = 92.5; x <= 116; x += 5.8) {
+    Z.add(MAT.stone, (() => { const g = new THREE.CylinderGeometry(0.72, 0.58, 0.78, 16); g.translate(x, 0.47, 53.9); return g; })());
+    B_GREEN.push(TRS(x, 2.5, 53.9, 0, RNG() * 6, 0, 1.1, 1.0, 1.1), new THREE.Color().setHSL(0.27, 0.45, 0.3));
+    B_STEELD.push(SEG([x, 0.8, 53.9], [x, 1.8, 53.9], 0.08));
+  }
+  // SIET letters (pink) at the front of the canopy, facing the plaza
+  const font = new FontLoader().parse(FONT_DATA);
+  let zc = 53.6;
+  for (const ch of ['S', 'I', 'E', 'T']) {
+    const geo = new TextGeometry(ch, { font, size: 2.3, depth: 0.42, curveSegments: 10, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.025, bevelSegments: 2 });
+    geo.computeBoundingBox(); const bb = geo.boundingBox, w = bb.max.x - bb.min.x;
+    geo.translate(-bb.min.x, 0, 0);
+    const m = new THREE.Mesh(geo, MAT.pink); m.rotation.y = Math.PI / 2; m.position.set(86.2, 0.46, zc);
+    m.castShadow = true; m.receiveShadow = true; Z.mesh(m);
+    Z.box(MAT.edge, 85.95, 0.08, zc - w - 0.18, 86.9, 0.46, zc + 0.18);
+    zc -= w + 0.95;
+  }
+  // faculty name wall at the north edge of the plaza (seen from the main road)
+  Z.box(MAT.stone, 60, 0, 29.4, 74, 1.5, 30.2);
+  Z.finish();
+
+  // fountain jets: GPU particles on ballistic paths
+  const pts = [];
+  const NA = 20, PA = 46;
+  for (let k = 0; k < NA; k++) {
+    const a = (k / NA) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+    const vh = 0.9, vv = 5.9, life = 1.34;
+    for (let i = 0; i < PA; i++) {
+      const j = (RNG() - 0.5) * 0.05;
+      pts.push([FX + 1.95 * c, 1.22, FZ + 1.95 * s, c * (vh + j), vv + j, s * (vh + j), (i / PA) * life, life]);
+    }
+  }
+  for (let k = 0; k < 9; k++) {
+    const r = k < 3 ? 0.25 : 0.85, a = (k / (k < 3 ? 3 : 6)) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+    const vv = k < 3 ? 8.6 : 7.2, life = (2 * vv) / 9.8 * 0.92;
+    for (let i = 0; i < 64; i++) {
+      pts.push([FX + r * c, 1.62, FZ + r * s, c * 0.18 + (RNG() - 0.5) * 0.05, vv + (RNG() - 0.5) * 0.15, s * 0.18 + (RNG() - 0.5) * 0.05, (i / 64) * life, life]);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  const o = new Float32Array(pts.length * 3), v = new Float32Array(pts.length * 3), ph = new Float32Array(pts.length), lf = new Float32Array(pts.length);
+  pts.forEach((p, i) => { o.set(p.slice(0, 3), i * 3); v.set(p.slice(3, 6), i * 3); ph[i] = p[6]; lf[i] = p[7]; });
+  g.setAttribute('position', new THREE.BufferAttribute(o, 3));
+  g.setAttribute('aVel', new THREE.BufferAttribute(v, 3));
+  g.setAttribute('aPhase', new THREE.BufferAttribute(ph, 1));
+  g.setAttribute('aLife', new THREE.BufferAttribute(lf, 1));
+  const jetMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false,
+    uniforms: { uTime: { value: 0 }, uScale: { value: 600 }, uGlow: { value: 0 } },
+    vertexShader: `attribute vec3 aVel; attribute float aPhase; attribute float aLife; uniform float uTime; uniform float uScale; varying float vA;
+      void main(){ float t = mod(uTime + aPhase, aLife); vec3 p = position + aVel * t + vec3(0.0, -4.9 * t * t, 0.0);
+        vA = 1.0 - smoothstep(0.75, 1.0, t / aLife);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = max(1.5, 0.12 * uScale / -mv.z); }`,
+    fragmentShader: `uniform float uGlow; varying float vA; void main(){ vec2 c = gl_PointCoord - 0.5; float d = dot(c, c); if (d > 0.25) discard;
+        vec3 col = mix(vec3(0.86, 0.94, 1.0), vec3(0.75, 0.9, 1.0) * 1.6, uGlow); gl_FragColor = vec4(col, (1.0 - d * 4.0) * 0.9 * vA); }`,
+  });
+  const jets = new THREE.Points(g, jetMat); jets.frustumCulled = false;
+  site.add(jets);
+  TICKERS.push(t => { jetMat.uniforms.uTime.value = t; jetMat.uniforms.uScale.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))); });
+  window.__jetMat = jetMat;
+  register('plaza', 'ลานหน้าคณะ', 'ลานน้ำพุ · ตัวอักษร SIET', [
+    'ลานปูหินลายข้าวหลามตัด อยู่ระหว่างหลังคาโครงเหล็กกับอาคารอิฐแดง', 'ตัวอักษร SIET สีชมพูตั้งอยู่หน้าบันไดทางเข้าใต้หลังคาโครงเหล็ก'], [108, 5, 42]);
+}
+
+// ---------------------------------------------------------------- red-brick front block (2 storeys)
+{
+  const F = new Builder('front');
+  const X0 = 87, X1 = 119, Z0 = 59.2, Z1 = 84.5, W = Z0 + 0.4;
+  F.box(MAT.brick, X0, 0, W, X1, 8.4, Z1, ['px', 'nx', 'pz', 'nz']);
+  F.box(MAT.roof, X0, 0, W, X1, 8.4, Z1, ['py']);
+  F.box(MAT.white, X0 - 0.4, 8.2, Z0 - 0.2, X1, 10.1, W + 0.4);
+  F.box(MAT.white, X0 - 0.4, 8.2, W, X0 + 0.4, 10.1, Z1);
+  F.box(MAT.white, X0 - 0.4, 0, Z0 - 0.2, X0 + 2.6, 8.2, W + 0.6);
+  F.box(MAT.glassDark, X0 + 2.8, 0.1, Z0 + 0.3, X1 - 1.5, 3.3, W, ['nz']);
+  for (let x = X0 + 4.8; x < X1 - 1.5; x += 3.6) {
+    F.box(MAT.glassDark, x - 0.42, 4.7, Z0 + 0.28, x + 0.42, 7.9, W, ['nz', 'px', 'nx']);
+    F.box(MAT.white, x - 0.6, 4.5, Z0 + 0.15, x + 0.6, 4.68, W);
+  }
+  F.box(MAT.canopyTop, X0 + 2.8, 3.55, Z0 - 2.9, X1 - 0.6, 3.78, W, ['py', 'nz', 'px', 'nx']);
+  F.box(MAT.soffit, X0 + 2.8, 3.55, Z0 - 2.9, X1 - 0.6, 3.78, W, ['ny']);
+  for (let x = X0 + 4; x < X1 - 0.6; x += 3.6) B_STEELD.push(SEG([x, 6.6, W], [x, 3.78, Z0 - 2.8], 0.05));
+  F.box(MAT.white2, 94.5, 8.4, 64.5, 114.5, 10.2, 79.5, ['px', 'nx', 'pz', 'nz']);
+  gable(F, MAT.metalRoof, 93.8, 115.2, 63.8, 80.2, 10.2, 12.6);
+  for (let i = 0; i < 4; i++) F.mass(MAT.white2, MAT.roofDark, 89 + (i % 2) * 2.6, 8.4, 66 + i * 4, 91.2 + (i % 2) * 2.6, 9.8, 68.2 + i * 4);
+  F.finish();
+  register('front', 'อาคารอิฐแดง 2 ชั้น', 'สูงราว 10 ม. · 2 ชั้น', [
+    'ผนังอิฐแดง หน้าต่างแนวตั้ง และแถบคานสีขาวด้านบน', 'กันสาดยาวตลอดแนวหน้าอาคารฝั่งลานน้ำพุ'], [104, 14, 70]);
+}
+
+// ---------------------------------------------------------------- 5-storey teaching & lab block (long balconies, logo cube)
+{
+  const M = new Builder('middle');
+  const X0 = 40, X1 = 119, Z0 = 84.5, Z1 = 104, H = 19;
+  M.box(MAT.fac_brick, X0, 0, Z0 + 2.1, X1, H, Z1, ['px', 'nx', 'pz', 'nz']);
+  M.box(MAT.roof, X0, 0, Z0 + 2.1, X1, H, Z1, ['py']);
+  for (let k = 1; k <= 5; k++) {
+    const y = 3.8 * k;
+    M.box(MAT.white, X0 + 0.3, y - 0.24, Z0, X1 - 0.3, y, Z0 + 2.1);
+    if (k < 5) {
+      M.box(MAT.white, X0 + 0.3, y, Z0, X1 - 0.3, y + 1.05, Z0 + 0.25);
+      for (let x = X0 + 5; x < X1 - 4; x += 8.5) B_FLOWER.push(TRS(x + rand(-1, 1), y + 1.18, Z0 + 0.14, 0, 0, 0, 2.0, 0.28, 0.36));
+      for (let x = X0 + 9; x < X1 - 4; x += 17) B_GREEN.push(TRS(x, y + 1.3, Z0 + 0.15, 0, 0, 0, 0.9, 0.35, 0.3), new THREE.Color().setHSL(0.3, 0.45, 0.3));
+    }
+  }
+  for (let x = X0 + 0.3; x <= X1; x += 8.9) M.box(MAT.white, x, 0, Z0, x + 0.5, H, Z0 + 0.5);
+  M.parapet(MAT.white, X0, Z0, X1, Z1, H, 1.2, 0.3);
+  M.box(MAT.brickTan, 77, H, 87, 86, H + 6.2, 95);
+  M.box(MAT.white2, 76.8, H + 6.2, 86.8, 86.2, H + 6.5, 95.2);
+  const ringG = new THREE.PlaneGeometry(4.3, 4.3); ringG.rotateY(Math.PI); ringG.translate(81.5, H + 3.2, 86.97);
+  const ringE = new THREE.PlaneGeometry(3.8, 3.8); ringE.rotateY(Math.PI / 2); ringE.translate(86.03, H + 3.2, 91);
+  M.mesh(new THREE.Mesh(ringG, MAT.ring)); M.mesh(new THREE.Mesh(ringE, MAT.ring));
+  M.mass(MAT.brick, MAT.roof, 52, H, 90, 58, H + 3.8, 96);
+  M.mass(MAT.brick, MAT.roof, 100, H, 89, 106, H + 3.8, 95);
+  M.finish();
+  solarArray(41.5, 88, 51, 102.5, H); solarArray(59, 88, 76, 102.5, H); solarArray(87.5, 88, 99, 102.5, H); solarArray(107, 88, 117.5, 102.5, H);
+  register('middle', 'อาคารเรียนและปฏิบัติการ 5 ชั้น', 'สูงราว 20 ม. · 5 ชั้น', [
+    'ตามประวัติคณะ อาคาร 5 ชั้น พื้นที่ใช้สอย 8,410 ตร.ม. เปิดใช้ปี 2536',
+    'ระเบียงยาวพร้อมกระบะดอกไม้ด้านทิศเหนือ บนหลังคามีกล่องอิฐติดตราคณะ', 'ใน Google Maps มีหมุด Maker Space IE.Tech อยู่ที่อาคารนี้'], [62, 25, 94]);
+}
+
+// ---------------------------------------------------------------- east wing on the driveway: 3 storeys by the plaza, 4 storeys further south
+{
+  const E = new Builder('east');
+  const X0 = 119, X1 = 130.5, Z0 = 59, ZM = 80, Z1 = 112, H3 = 11.4, H4 = 15.2;
+  const part = (z0, z1, H, n) => {
+    E.box(MAT.fac_brick, X0, 0, z0, X1, H, z1, ['px', 'nx', 'pz', 'nz']);
+    E.box(MAT.roof, X0, 0, z0, X1, H, z1, ['py']);
+    for (let k = 1; k <= n; k++) {
+      const y = 3.8 * k;
+      E.box(MAT.white, X1, y - 0.5, z0 - 0.3, X1 + 0.35, y, z1);
+      E.box(MAT.white, X0 - 0.35, y - 0.5, z0 - 0.3, X0, y, z1);
+      E.box(MAT.white, X0, y - 0.5, z0 - 0.35, X1, y, z0);
+    }
+    for (let z = z0 + 1; z < z1 - 1; z += 1.2) E.box(MAT.metalRoof, X0 + 0.6, H, z, X1 - 0.6, H + 0.25, z + 0.6);
+    E.box(MAT.white, X0, H, z0, X1, H + 1.1, z0 + 0.3); E.box(MAT.white, X0, H, z1 - 0.3, X1, H + 1.1, z1);
+    E.box(MAT.white, X0, H, z0, X0 + 0.3, H + 1.1, z1); E.box(MAT.white, X1 - 0.3, H, z0, X1, H + 1.1, z1);
+  };
+  part(Z0, ZM, H3, 3); part(ZM, Z1, H4, 4);
+  E.finish();
+  register('east', 'ปีกอาคารฝั่งตะวันออก', '3–4 ชั้น', ['อาคารอิฐสลับแถบคานขาว ต่อจากปลายอาคารอิฐแดงไปตามถนนทางเข้าฝั่งตะวันออก'], [125, 18, 70]);
+}
+
+// ---------------------------------------------------------------- barrel-vault hall
+{
+  const V = new Builder('vault');
+  const X0 = 72, X1 = 86.5, Z0 = 58, Z1 = 82, HW = 7.6, R = (X1 - X0) / 2, RISE = 3.3;
+  V.box(MAT.fac_ribbon, X0, 0, Z0, X1, HW, Z1, ['px', 'nx', 'pz', 'nz']);
+  const vg = new THREE.CylinderGeometry(R + 0.3, R + 0.3, Z1 - Z0 + 1, 32, 1, true, Math.PI / 2, Math.PI);
+  vg.rotateX(Math.PI / 2); vg.scale(1, RISE / R, 1); vg.translate((X0 + X1) / 2, HW, (Z0 + Z1) / 2);
+  V.add(MAT.vault, vg);
+  for (const [z, rot] of [[Z0 - 0.45, Math.PI], [Z1 + 0.45, 0]]) {
+    const cg = new THREE.CircleGeometry(R + 0.3, 32, 0, Math.PI); cg.scale(1, RISE / R, 1); cg.rotateY(rot); cg.translate((X0 + X1) / 2, HW, z);
+    V.add(MAT.glassDS, cg);
+  }
+  V.finish();
+  register('vault', 'อาคารหลังคาโค้ง', 'สูงราว 11 ม.', ['หลังคาโลหะทรงโค้ง อยู่ระหว่างปีกอาคารขั้นบันไดกับอาคารอิฐแดง'], [79, 14, 70]);
+}
+
+// ---- 40_back.js
+// ================================================================ buildings behind (south of) the front group
+// courtyard building: 3 storeys of white bands, 5-storey brick stair towers at the west end
+{
+  const C = new Builder('courtyard');
+  const H = 11.4;
+  const wing = (x0, z0, x1, z1) => C.mass(MAT.fac_brick, MAT.roof, x0, 0, z0, x1, H, z1);
+  wing(40, 104, 75, 108.5); wing(40, 117, 75, 133); wing(40, 108.5, 54, 117); wing(69, 108.5, 75, 117);
+  C.parapet(MAT.white, 40, 104, 75, 133, H, 1.2, 0.3);
+  C.parapet(MAT.white, 54, 108.5, 69, 117, H, 1.1, 0.25);
+  for (let k = 1; k <= 3; k++) C.box(MAT.white, 39.7, 3.8 * k - 0.4, 103.7, 75.3, 3.8 * k, 133.3, ['px', 'nx', 'pz', 'nz', 'ny']);
+  for (const [x0, z0] of [[39.6, 104], [39.6, 128.4]]) {
+    C.mass(MAT.brick, MAT.roof, x0, 0, z0, x0 + 4.6, 19, z0 + 4.6);
+    for (let k = 1; k <= 4; k++) C.box(MAT.white, x0 - 0.2, 3.8 * k + 3.2, z0 - 0.2, x0 + 4.8, 3.8 * k + 3.8, z0 + 4.8);
+  }
+  C.box(MAT.paving, 54, 0, 108.5, 69, 0.1, 117, ['py']);
+  C.finish();
+  solarArray(44.5, 105, 74, 108, H); solarArray(44.5, 118, 74, 132, H); solarArray(41, 109, 53, 116.5, H);
+  register('courtyard', 'อาคารคอร์ตกลาง', 'สูงราว 12 ม. · 3 ชั้น', ['อาคารล้อมคอร์ตต้นไม้ มีหอบันไดอิฐ 5 ชั้นที่มุมฝั่งซอย', 'ใน Google Maps มีหมุด IETECH PHOTO อยู่ที่อาคารนี้'], [57, 16, 125]);
+}
+// garden east of the courtyard building
+// อาคารปฏิบัติการพิเศษจอมไตร: 6-storey main block with roof frame + 4-storey west block
+{
+  const J = new Builder('jomtrai');
+  const H6 = 22.8, H4 = 15.2;
+  J.mass(MAT.fac_brick, MAT.roof, 106, 0, 104, 127, H6, 151);
+  J.parapet(MAT.white, 106, 104, 127, 151, H6, 1.2, 0.3);
+  for (let k = 1; k <= 6; k++) J.box(MAT.white, 105.7, 3.8 * k - 0.45, 103.7, 127.3, 3.8 * k, 151.3, ['px', 'nx', 'pz', 'nz', 'ny']);
+  J.mass(MAT.fac_ribbon, MAT.roof, 88, 0, 104, 106, H4, 151);
+  J.parapet(MAT.white, 88, 104, 106, 151, H4, 1.1, 0.3);
+  // white frame grid over the roof of the main block
+  for (let x = 107.5; x <= 125.6; x += 4.5) J.box(MAT.white, x, H6 + 2.2, 105.5, x + 0.3, H6 + 2.6, 149.5);
+  for (let z = 105.5; z <= 149.6; z += 4.4) J.box(MAT.white, 107.5, H6 + 2.6, z, 125.9, H6 + 2.9, z + 0.3);
+  for (const [x, z] of [[107.5, 105.5], [125.6, 105.5], [107.5, 149.2], [125.6, 149.2], [116.5, 127.5]]) J.box(MAT.white, x, H6, z, x + 0.35, H6 + 2.6, z + 0.35);
+  // brick entrance portico on the north side
+  J.mass(MAT.brick, MAT.roof, 110, 0, 100.5, 118, 7.2, 104);
+  J.box(MAT.white, 109.7, 7.2, 100.2, 118.3, 8.0, 104);
+  J.finish();
+  solarArray(107.5, 106, 125.5, 149.5, H6); solarArray(89.5, 105.5, 104.5, 149.5, H4);
+  register('jomtrai', 'อาคารปฏิบัติการพิเศษจอมไตร', '6 ชั้น · พื้นที่ใช้สอย 10,400 ตร.ม.', [
+    'อาคารเรียนและปฏิบัติงานหลังที่ 2 ของคณะ ได้รับพระราชทานชื่อเมื่อปี 2544',
+    'ใน Google Maps มีหมุดสำนักงานคณบดีคณะศิลปศาสตร์อยู่ในอาคารนี้ด้วย'], [116, 29, 128]);
+}
+// long north-south block with bleachers facing the sports field
+{
+  const L = new Builder('long');
+  const H = 19;
+  L.mass(MAT.fac_ribbon, MAT.roof, 73, 0, 136, 87.5, H, 196);
+  L.parapet(MAT.white, 73, 136, 87.5, 196, H, 1.1, 0.3);
+  for (let k = 1; k <= 5; k++) L.box(MAT.white, 72.7, 3.8 * k - 0.4, 135.7, 87.8, 3.8 * k, 196.3, ['px', 'nx', 'pz', 'nz', 'ny']);
+  for (const z0 of [138, 190]) {
+    L.mass(MAT.brick, MAT.roof, 76, H, z0, 84.5, H + 3.6, z0 + 5);
+    L.box(MAT.white, 75.8, H + 1.2, z0 - 0.2, 84.7, H + 1.7, z0 + 5.2);
+  }
+  for (let i = 0; i < 3; i++) L.box(MAT.granite, 87.5, 0, 152, 90.5 - i * 1.0, 0.45 * (i + 1), 194);
+  for (let i = 0; i < 5; i++) L.box(MAT.granite, 73, 0, 196 + i * 0.6, 90, 0.9 - i * 0.18, 196.6 + i * 0.6);
+  L.finish();
+  solarArray(74.5, 144, 86, 188, H);
+  register('long', 'อาคารยาว 5 ชั้น', 'สูงราว 20 ม. · 5 ชั้น', ['อาคารแนวเหนือ–ใต้ระหว่างโรงอาหารกับลานกีฬา', 'มีขั้นอัฒจันทร์หันไปทางลานกีฬา'], [80, 25, 166]);
+}
+// multipurpose sports field (2545)
+{
+  const S = new Builder('court');
+  const tex = canvasTex(1024, 1024, (g, w, h) => {
+    noiseFill(g, w, h, '#a4a6a4', 0.08, 6000, 3);
+    g.strokeStyle = '#f2f2ee'; g.lineWidth = 5;
+    const sx = w / 37, sy = h / 44;
+    const court = (cx, cy) => {
+      const W = 15 * sx, L = 28 * sy;
+      g.save(); g.translate(cx, cy);
+      g.strokeRect(-W / 2, -L / 2, W, L);
+      g.beginPath(); g.moveTo(-W / 2, 0); g.lineTo(W / 2, 0); g.stroke();
+      g.beginPath(); g.arc(0, 0, 1.8 * sx, 0, Math.PI * 2); g.stroke();
+      for (const sgn of [-1, 1]) {
+        g.strokeRect(-2.45 * sx, sgn > 0 ? L / 2 - 5.8 * sy : -L / 2, 4.9 * sx, 5.8 * sy);
+        g.beginPath(); g.arc(0, sgn * (L / 2 - 1.6 * sy), 6.75 * sx, sgn > 0 ? Math.PI * 1.08 : 0.08 * Math.PI, sgn > 0 ? Math.PI * 1.92 : Math.PI * 0.92); g.stroke();
+      }
+      g.restore();
+    };
+    court(w * 0.27, h * 0.5); court(w * 0.73, h * 0.5);
+    g.strokeStyle = '#e9c64e'; g.lineWidth = 4; g.strokeRect(w * 0.05, h * 0.06, w * 0.9, h * 0.88);
+  });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(37, 44), std(0xffffff, 0.92, 0, { map: tex }));
+  m.rotation.x = -Math.PI / 2; m.position.set(109, 0.1, 174.5); m.receiveShadow = true;
+  S.mesh(m);
+  S.box(MAT.curb, 90.5, 0, 152, 127.5, 0.16, 152.6); S.box(MAT.curb, 90.5, 0, 196.4, 127.5, 0.16, 197);
+  for (let i = 0; i < 3; i++) S.box(MAT.granite, 127.5 + i * 1.0, 0, 154, 131, 0.45 * (i + 1), 195);
+  S.finish(site, { cast: false });
+  register('court', 'ลานกีฬาอเนกประสงค์', 'ลานคอนกรีตกลางแจ้ง', ['สร้างพร้อมการปรับภูมิทัศน์หน้าคณะเมื่อปี 2545', 'มีขั้นอัฒจันทร์สองฝั่ง'], [109, 4, 174]);
+}
+// cafeteria: big brown hip roof (the X seen from above) with a gablet, plus a flat-roof wing
+{
+  const F = new Builder('cafeteria');
+  const H = 7.6, HF = 8.0;
+  F.mass(MAT.fac_brick, MAT.roof, 41, 0, 140, 50, HF, 166);
+  F.parapet(MAT.white, 41, 140, 50, 166, HF, 1.0, 0.3);
+  F.box(MAT.white2, 50, 0, 140.5, 73, H, 165.5, ['px', 'nx', 'pz', 'nz']);
+  F.box(MAT.glassDark, 50.6, 0.1, 140.4, 72.4, 3.4, 140.5, ['nz']);
+  F.box(MAT.glassDark, 50.6, 0.1, 165.5, 72.4, 3.4, 165.6, ['pz']);
+  const x0 = 49.3, x1 = 73.7, z0 = 139.6, z1 = 166.4, ap = [61.5, H + 5.6, 153];
+  const e = [[x0, H, z0], [x1, H, z0], [x1, H, z1], [x0, H, z1]];
+  F.poly(MAT.hip, [e[0], e[1], ap], [0, 1, -1]); F.poly(MAT.hip, [e[1], e[2], ap], [1, 1, 0]);
+  F.poly(MAT.hip, [e[2], e[3], ap], [0, 1, 1]); F.poly(MAT.hip, [e[3], e[0], ap], [-1, 1, 0]);
+  F.box(MAT.white, x0, H - 0.45, z0, x1, H, z1, ['ny', 'px', 'nx', 'pz', 'nz']);
+  // gablet (small gable vent) at the apex
+  F.box(MAT.white2, ap[0] - 2.2, ap[1] - 1.4, ap[2] - 0.6, ap[0] + 2.2, ap[1] - 0.2, ap[2] + 0.6);
+  gable(F, MAT.hip, ap[0] - 2.6, ap[0] + 2.6, ap[2] - 1.2, ap[2] + 1.2, ap[1] - 0.2, ap[1] + 0.9, MAT.white2);
+  F.finish();
+  for (const c of e) B_COL.push(SEG([c[0], c[1] + 0.12, c[2]], [ap[0], ap[1] + 0.12, ap[2]], 0.16));
+  for (const [dx, dz] of [[0, -8], [0, 8], [-7, 0], [7, 0]]) {
+    const x = ap[0] + dx, z = ap[2] + dz, k = 1 - (Math.abs(dx) / 12.2 + Math.abs(dz) / 13.4);
+    B_PLANTER.push(TRS(x, H + 5.6 * k + 0.3, z, 0, dx ? Math.PI / 2 : 0, 0, 2.4, 0.35, 0.45));
+  }
+  solarArray(41.8, 141, 49.2, 165, HF);
+  register('cafeteria', 'โรงอาหาร คณะครุศาสตร์ฯ', '2 ชั้น · หลังคาทรงปั้นหยา', ['หลังคาสีน้ำตาลมีสันหลังคาสีขาว เป็นรูปตัว X เมื่อมองจากด้านบน', 'ชั้นล่างเปิดโล่ง ฝั่งตะวันตกเป็นปีกหลังคาเรียบติดแผงโซลาร์'], [61.5, 17, 153]);
+}
+// student club with the basketball court on its roof, and the yellow building
+{
+  const G = new Builder('club');
+  const H = 7.8;
+  G.mass(MAT.fac_ribbon, MAT.roof, 47, 0, 172, 64, H, 186);
+  const tex = canvasTex(512, 420, (g, w, h) => {
+    g.fillStyle = '#d98a5a'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#e8b04f'; g.fillRect(w * 0.07, h * 0.08, w * 0.86, h * 0.84);
+    g.fillStyle = '#8a5a9a'; g.fillRect(0, h * 0.36, w * 0.17, h * 0.28); g.fillRect(w * 0.83, h * 0.36, w * 0.17, h * 0.28);
+    g.strokeStyle = '#ffffff'; g.lineWidth = 4;
+    g.strokeRect(w * 0.07, h * 0.08, w * 0.86, h * 0.84);
+    g.beginPath(); g.moveTo(w / 2, h * 0.08); g.lineTo(w / 2, h * 0.92); g.stroke();
+    g.beginPath(); g.arc(w / 2, h / 2, h * 0.11, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.arc(w * 0.07, h / 2, h * 0.32, -Math.PI / 2, Math.PI / 2); g.stroke();
+    g.beginPath(); g.arc(w * 0.93, h / 2, h * 0.32, Math.PI / 2, Math.PI * 1.5); g.stroke();
+  });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(16.4, 13.4), std(0xffffff, 0.8, 0, { map: tex }));
+  m.rotation.x = -Math.PI / 2; m.position.set(55.5, H + 0.04, 179); m.receiveShadow = true;
+  G.mesh(m);
+  G.parapet(MAT.white, 47, 172, 64, 186, H, 1.0, 0.25);
+  G.finish();
+  for (const [a, b] of [[[47.2, 172.2], [63.8, 172.2]], [[47.2, 185.8], [63.8, 185.8]], [[47.2, 172.2], [47.2, 185.8]], [[63.8, 172.2], [63.8, 185.8]]]) {
+    B_STEELD.push(SEG([a[0], H + 3.2, a[1]], [b[0], H + 3.2, b[1]], 0.05));
+    const n = Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 3);
+    for (let i = 0; i <= n; i++) { const t = i / n; B_STEELD.push(SEG([a[0] + (b[0] - a[0]) * t, H, a[1] + (b[1] - a[1]) * t], [a[0] + (b[0] - a[0]) * t, H + 3.2, a[1] + (b[1] - a[1]) * t], 0.05)); }
+  }
+  register('club', 'สโมสรนักศึกษา คณะครุศาสตร์ฯ', '2 ชั้น · สนามบาสบนหลังคา', ['หลังคาทาสีเป็นสนามบาสเกตบอล'], [55.5, 13.5, 179]);
+
+  const Y = new Builder('yellow');
+  Y.mass(MAT.fac_yellow, MAT.roof, 47, 0, 186.2, 64, 7.2, 194);
+  Y.parapet(MAT.white, 47, 186.2, 64, 194, 7.2, 0.9, 0.25);
+  Y.finish();
+  solarArray(48, 187, 63, 193.5, 7.2);
+
+  const K = new Builder('kiosk');
+  K.mass(MAT.white2, MAT.roofDark, 44, 0, 133.5, 72, 3.6, 139.5);
+  K.box(MAT.green, 47, 0, 166.5, 64, 0.9, 171.5);
+  K.finish();
+}
+
+// ---- 50_details.js
+// ================================================================ trees, cars, pedestrian bridge, street lights
+const B_TRUNK = new Inst(GEO.cyl6, std(0x6e5c4a, 0.9));
+function tree(x, z, h = 9, r = 4.5, kind = 'round', base = 0) {
+  const tw = Math.max(0.16, 0.24 * h / 9);
+  B_TRUNK.push(TRS(x, base + h * 0.32, z, 0, 0, 0, tw, h * 0.64, tw));
+  const col = new THREE.Color().setHSL(rand(0.22, 0.3), rand(0.4, 0.56), rand(0.22, 0.31));
+  if (kind === 'rain') {
+    for (let i = 0; i < 4; i++) {
+      const a = RNG() * 6.28, d = r * (i ? 0.42 : 0);
+      B_GREEN.push(TRS(x + Math.cos(a) * d, base + h * 0.8 + rand(-0.5, 0.4), z + Math.sin(a) * d, 0, RNG() * 6, 0, r * rand(0.62, 0.8), r * 0.4, r * rand(0.62, 0.8)), col);
+    }
+  } else {
+    B_GREEN.push(TRS(x, base + h * 0.68, z, 0, RNG() * 6, 0, r, r * rand(0.85, 1.05), r), col);
+    B_GREEN.push(TRS(x + rand(-1, 1), base + h * 0.68 + r * 0.45, z + rand(-1, 1), 0, RNG() * 6, 0, r * 0.62, r * 0.55, r * 0.62), col.clone().offsetHSL(0, 0, 0.04));
+  }
+}
+// rain trees along Chalong Krung road in front of the lattice and the plaza
+for (let x = 55; x <= 128; x += 9.5) tree(x + rand(-1.2, 1.2), 24.5 + rand(-2.5, 2.5), rand(8.5, 11.5), rand(4.2, 5.4), 'rain');
+for (let x = 60; x <= 126; x += 19) tree(x + rand(-2, 2), 28 + rand(-0.5, 0.5), rand(5.5, 7), rand(2.2, 2.8), 'round');
+// north side of the main road and the median
+for (let x = Math.max(-150, RX0 + 10); x <= Math.min(300, RX1 - 10); x += 13) { tree(x + rand(-2, 2), -17 + rand(-2, 2), rand(7, 11), rand(3.2, 4.6), RNG() < 0.5 ? 'rain' : 'round'); }
+for (let x = Math.max(-150, RX0 + 10); x <= Math.min(300, RX1 - 10); x += 16) { if (x > 35 && x < 47) continue; B_GREEN.push(TRS(x, 0.9, 3.5, 0, 0, 0, 2.2, 0.7, 0.55), new THREE.Color().setHSL(0.27, 0.4, 0.3)); }
+// planting strip along the soi, east grass strip, gardens
+for (let z = 80; z <= 196; z += 9) tree(35.5 + rand(-1.2, 1.2), z + rand(-2, 2), rand(7, 10), rand(2.8, 3.8));
+for (let z = 108; z <= 196; z += 11) tree(130 + rand(-0.6, 0.6), z + rand(-2, 2), rand(7, 9.5), rand(2.6, 3.4));
+for (const [x, z] of [[79, 108], [85, 113], [79.5, 121], [85.5, 128], [81, 131]]) tree(x, z, rand(10, 13), rand(3.8, 4.8), 'rain');
+for (const [x, z] of [[58.5, 111.5], [65, 114]]) tree(x, z, 8, 2.8);
+for (const [x, z] of [[43, 170], [43.5, 180], [42.5, 190], [44, 196.5]]) tree(x + rand(-0.6, 0.6), z, rand(6.5, 8.5), rand(2.6, 3.3));
+// context trees across the soi and the driveway
+for (let z = 22; z <= 200; z += 16) { tree(144 + rand(-1, 1), z, rand(8, 11), rand(3.5, 4.6)); tree(18 + rand(-1, 0.5), z + 6, rand(8, 11), rand(3.2, 4.2)); }
+// roof gardens on the podium and terraces
+for (const [x, z, h] of [[36, 55.5, 25], [48.5, 55.5, 25], [36, 66.5, 12.1], [47.5, 69, 12.1], [54.2, 63, 21.2]]) tree(x, z, 4.2, 1.8, 'round', h);
+
+// ---------------------------------------------------------------- cars
+const CAR_COLS = [0xf4f4f2, 0xd9dcdf, 0x9aa0a6, 0x2a2d31, 0x8d1f24, 0x2b4f8a, 0xf4f4f2, 0xbfc3c7];
+const carBody = new Inst(GEO.box, std(0xffffff, 0.3, 0.55));
+const carCab = new Inst(GEO.box, std(0x26313b, 0.15, 0.7));
+function car(x, z, rot, col) {
+  const fx = Math.cos(rot), fz = -Math.sin(rot);
+  carBody.push(TRS(x, 0.72, z, 0, rot, 0, 4.4, 0.82, 1.8), col);
+  carCab.push(TRS(x - fx * 0.25, 1.4, z - fz * 0.25, 0, rot, 0, 2.3, 0.58, 1.58));
+}
+for (let z = 26; z < 205; z += 6.2) if (RNG() < 0.72) car(22.6, z, Math.PI / 2, CAR_COLS[Math.floor(RNG() * CAR_COLS.length)]);
+for (let x = 40; x < 130; x += 6.0) if (RNG() < 0.55) car(x, 207.6, 0, CAR_COLS[Math.floor(RNG() * CAR_COLS.length)]);
+for (let z = 62; z < 100; z += 6.2) if (RNG() < 0.6) car(139.2, z, Math.PI / 2, CAR_COLS[Math.floor(RNG() * CAR_COLS.length)]);
+carBody.build(); carCab.build();
+// moving traffic on the main road (drive on the left: eastbound on the north carriageway)
+if (!EXPORT) {
+  const N = 16, lanes = [[-6.2, 1], [-2.6, 1], [1.0, 1], [6.1, -1], [9.9, -1], [13.6, -1]];
+  const body = new THREE.InstancedMesh(GEO.box, carBody.mat, N), cab = new THREE.InstancedMesh(GEO.box, carCab.mat, N);
+  body.castShadow = cab.castShadow = true;
+  const cars = [];
+  for (let i = 0; i < N; i++) {
+    const [z, dir] = lanes[i % lanes.length];
+    cars.push({ x0: rand(-450, 450), z, dir, v: rand(9, 14) });
+    body.setColorAt(i, new THREE.Color(CAR_COLS[i % CAR_COLS.length]));
+  }
+  site.add(body, cab);
+  const m = new THREE.Matrix4();
+  TICKERS.push(t => {
+    cars.forEach((c, i) => {
+      const x = ((c.x0 + c.dir * c.v * t) % 900 + 900) % 900 - 450;
+      const rot = c.dir > 0 ? 0 : Math.PI;
+      body.setMatrixAt(i, TRS(x, 0.72, c.z, 0, rot, 0, 4.4, 0.82, 1.8));
+      cab.setMatrixAt(i, TRS(x - c.dir * 0.25, 1.4, c.z, 0, rot, 0, 2.3, 0.58, 1.58));
+    });
+    body.instanceMatrix.needsUpdate = cab.instanceMatrix.needsUpdate = true;
+  });
+}
+
+// ---------------------------------------------------------------- pedestrian bridge over the main road, in front of the tower
+{
+  const BR = new Builder('bridge');
+  const xa = 39.0, xb = 43.0, za = -13.5, zb = 18.2, y = 6.0;
+  BR.box(MAT.white2, xa, y - 0.6, za, xb, y, zb);
+  BR.box(MAT.blue, xa - 0.12, y - 0.55, za, xa, y + 0.5, zb);
+  BR.box(MAT.blue, xb, y - 0.55, za, xb + 0.12, y + 0.5, zb);
+  BR.box(MAT.glassRail, xa, y, za, xa + 0.06, y + 1.2, zb); BR.box(MAT.glassRail, xb - 0.06, y, za, xb, y + 1.2, zb);
+  BR.box(MAT.metalRoof, xa - 0.4, y + 2.9, za, xb + 0.4, y + 3.05, zb);
+  for (let z = za; z <= zb + 0.01; z += 3.15) {
+    for (const x of [xa, xb]) B_STEELD.push(SEG([x, y, z], [x, y + 2.9, z], 0.07));
+    if (z + 3.15 <= zb + 0.01) for (const x of [xa, xb]) B_STEELD.push(SEG([x, y, z], [x, y + 2.9, z + 3.15], 0.05));
+  }
+  for (const z of [-10.5, 3.5, 16.8]) for (const x of [39.6, 42.4]) B_COL.push(TRS(x, (y - 0.6) / 2, z, 0, 0, 0, 0.32, y - 0.6, 0.32));
+  const steps = 17, rise = y / steps, run = 1.0;
+  for (let i = 0; i < steps; i++) {
+    BR.box(MAT.granite, xb + i * run, 0, 16.4, xb + (i + 1) * run, y - i * rise, 19.0);
+    BR.box(MAT.granite, xa - (i + 1) * run, 0, -13.2, xa - i * run, y - i * rise, -10.6);
+  }
+  BR.box(MAT.blue, xb, y - 0.4, 19.0, xb + steps * run, y + 0.3, 19.12);
+  BR.finish();
+}
+
+// ---------------------------------------------------------------- street lights (glow at dusk)
+{
+  const poles = new Inst(GEO.cyl6, MAT.steelDark), heads = new Inst(GEO.box, std(0xfff3dc, 0.5, 0, { emissive: 0xffe2b0, emissiveIntensity: 0 }), { cast: false });
+  for (let x = Math.max(-140, RX0 + 10); x <= Math.min(290, RX1 - 10); x += 32) for (const [z, s] of [[17.6, -1], [-10.6, 1], [3.5, 0]]) {
+    if (z > 10 && x > 36 && x < 64) continue;
+    poles.push(TRS(x, 4.5, z, 0, 0, 0, 0.12, 9, 0.12));
+    if (s) { B_STEELD.push(SEG([x, 9, z], [x, 9, z + s * 2.2], 0.06)); heads.push(TRS(x, 8.95, z + s * 2.2, 0, 0, 0, 0.5, 0.18, 0.9)); }
+    else { for (const k of [-1, 1]) { B_STEELD.push(SEG([x, 9, z], [x, 9, z + k * 2.2], 0.06)); heads.push(TRS(x, 8.95, z + k * 2.2, 0, 0, 0, 0.5, 0.18, 0.9)); } }
+  }
+  poles.build(); const hm = heads.build();
+  GLOWABLE.push(hm.material);
+}
+B_TRUNK.build();
+
+// ---- 90_main.js
+// ================================================================ finalize, UI, camera, loop
+B_STEEL.build(site, 'tower');
+B_STEELD.build(site);
+B_COL.build(site);
+B_SOLAR.build(site);
+B_GREEN.build(site);
+B_FLOWER.build(site);
+B_PLANTER.build(site);
+
+const VIEWS = {
+  overview: { pos: [252, 128, -96], tgt: [84, 6, 102], tgtM: [62, 10, 62], fov: 40 },
+  plaza: { pos: [129.5, 1.3, 39], tgt: [72.2, 29.6, 79.2], fov: 74.5 },
+  street: { pos: [112, 24, -30], tgt: [52, 17, 45], fov: 46 },
+  road: { pos: [100, 2.5, -5], tgt: [54.1, 19.5, 60.5], fov: 70 },
+  drone: { pos: [229, 77, -65], tgt: [163.6, 54.1, -19.6], fov: 30 },
+  soi: { pos: [21, 1.6, -9], tgt: [41, 23, 34], fov: 62 },
+  top: { pos: [85, 340, 105.2], tgt: [85, 0, 105], fov: 40 },
+};
+const viewBtns = [...document.querySelectorAll('.view')];
+let tween = null;
+const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+function flyToPose(pos, tgt, fov, dur = 1.6) {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (dur <= 0 || reduce) {
+    camera.position.copy(pos); controls.target.copy(tgt); camera.fov = fov; camera.updateProjectionMatrix(); controls.update(); tween = null; return;
+  }
+  tween = { t: 0, dur, p0: camera.position.clone(), p1: pos, t0: controls.target.clone(), t1: tgt, f0: camera.fov, f1: fov };
+}
+function setView(name, dur = 1.6) {
+  const v = VIEWS[name]; if (!v) return;
+  const a = camera.aspect;
+  let pos = P(...v.pos), tgt = P(...(a < 1 && v.tgtM ? v.tgtM : v.tgt)), fov = v.fov;
+  if (a < 1.5) { // keep the composition on tall / narrow screens
+    const hHalf = Math.atan(Math.tan(THREE.MathUtils.degToRad(fov / 2)) * 16 / 9);
+    const ground = name === 'plaza' || name === 'soi' || name === 'road';
+    fov = Math.min(ground ? 84 : 62, fov * (ground ? 1.25 : 1.4));
+    if (!ground) {
+      const k = Math.min(1.55, Math.max(1, Math.tan(hHalf) / (a * Math.tan(THREE.MathUtils.degToRad(fov / 2)))));
+      pos = tgt.clone().add(pos.clone().sub(tgt).multiplyScalar(k));
+    }
+  }
+  flyToPose(pos, tgt, fov, dur);
+  viewBtns.forEach(b => b.setAttribute('aria-current', b.dataset.view === name ? 'true' : 'false'));
+}
+
+// ---------------------------------------------------------------- labels and selection
+const labelEls = {};
+for (const L of LABELS) {
+  const el = document.createElement('div');
+  el.className = 'lbl'; el.textContent = L.name; el.tabIndex = 0; el.setAttribute('role', 'button');
+  el.addEventListener('click', e => { e.stopPropagation(); select(L.id, true); });
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(L.id, true); } });
+  const o = new CSS2DObject(el); o.position.copy(P(...L.pos)); scene.add(o);
+  labelEls[L.id] = el;
+}
+const infoEl = document.getElementById('info');
+const hl = new THREE.Box3Helper(new THREE.Box3(), 0xe2589c);
+hl.visible = false; scene.add(hl);
+let selected = null;
+function groupBox(id) {
+  const box = new THREE.Box3();
+  site.traverse(o => { if (o.userData.id === id && !o.isInstancedMesh) box.expandByObject(o); });
+  return box;
+}
+function select(id, fly) {
+  if (!id || !INFO[id]) { selected = null; infoEl.hidden = true; hl.visible = false; Object.values(labelEls).forEach(e => e.classList.remove('on')); return; }
+  selected = id;
+  const I = INFO[id];
+  document.getElementById('infoName').textContent = I.name;
+  document.getElementById('infoMeta').textContent = I.meta;
+  const ul = document.getElementById('infoLines'); ul.textContent = '';
+  for (const s of I.lines) { const li = document.createElement('li'); li.textContent = s; ul.appendChild(li); }
+  infoEl.hidden = false;
+  Object.entries(labelEls).forEach(([k, e]) => e.classList.toggle('on', k === id));
+  const box = groupBox(id);
+  if (!box.isEmpty()) { hl.box.copy(box).expandByScalar(0.8); hl.visible = true; }
+  if (fly && !box.isEmpty()) {
+    const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    if (dir.y < 0.42) { dir.y = 0.42; dir.normalize(); }
+    const dist = Math.max(s.x, s.y * 1.3, s.z) * 1.05 / Math.tan(THREE.MathUtils.degToRad(42 / 2)) * 0.62 + 18;
+    flyToPose(c.clone().add(dir.multiplyScalar(dist)), c, 42, 1.4);
+    viewBtns.forEach(b => b.setAttribute('aria-current', 'false'));
+  }
+}
+document.getElementById('infoClose').addEventListener('click', () => select(null));
+const ray = new THREE.Raycaster();
+let down = null;
+renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; stopTour(); });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+  const hits = ray.intersectObject(site, true);
+  for (const h of hits) {
+    let o = h.object; while (o && !(o.userData.id && INFO[o.userData.id])) o = o.parent;
+    if (o) { select(o.userData.id, false); return; }
+    if (h.object.userData.id === 'ground' || h.object.parent?.userData.id === 'ground') break;
+  }
+  select(null);
+});
+
+// ---------------------------------------------------------------- toggles
+const $ = id => document.getElementById(id);
+function pressed(btn, on) { btn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+$('tLabels').addEventListener('click', () => {
+  const on = $('tLabels').getAttribute('aria-pressed') !== 'true'; pressed($('tLabels'), on);
+  document.body.classList.toggle('hide-labels', !on);
+});
+$('tSpin').addEventListener('click', () => {
+  controls.autoRotate = !controls.autoRotate; controls.autoRotateSpeed = 0.7; pressed($('tSpin'), controls.autoRotate);
+});
+let dusk = false;
+function setDusk(on) {
+  dusk = on; pressed($('tTime'), on);
+  applySky(on ? SKY_DUSK : SKY_DAY);
+  for (const m of GLOWABLE) m.emissiveIntensity = on ? 1.0 : 0;
+  MAT.glassDark.emissiveIntensity = on ? 0.6 : 0;
+  MAT.soffit.emissiveIntensity = on ? 0.32 : 0;
+  MAT.ring.emissiveIntensity = on ? 0.9 : 0;
+  MAT.pink.emissiveIntensity = on ? 0.35 : 0;
+  MAT.water.emissiveIntensity = on ? 0.55 : 0;
+  if (window.__onDusk) window.__onDusk(on);
+  if (clay) applyClay(true);
+}
+$('tTime').addEventListener('click', () => setDusk(!dusk));
+
+let clay = false;
+const CLAY = std(0xf3f2ee, 0.88), CLAY_GLASS = std(0xc6d0d6, 0.25, 0.2), CLAY_GREEN = std(0xdde6d6, 0.95), CLAY_GROUND = std(0xd9dcdc, 1);
+function applyClay(on) {
+  clay = on; pressed($('tClay'), on);
+  site.traverse(o => {
+    if (!o.isMesh) return;
+    if (o.userData.mat0 === undefined) { o.userData.mat0 = o.material; o.userData.ic0 = o.instanceColor || null; }
+    if (on) {
+      const m0 = o.userData.mat0;
+      if (m0 === MAT.pink || m0 === MAT.water || m0 === MAT.ring || m0 === MAT.glassRail) { o.material = m0; return; }
+      if (o.userData.ic0) o.instanceColor = null;
+      o.material = (m0 === MAT.glass || m0 === MAT.glassDark) ? CLAY_GLASS : (m0 === MAT.foliage ? CLAY_GREEN : CLAY);
+    } else {
+      o.material = o.userData.mat0; if (o.userData.ic0) o.instanceColor = o.userData.ic0;
+    }
+  });
+  sky.visible = !on;
+  const bg = dusk ? 0x8d96a1 : 0xc9d0d6;
+  scene.background = on ? new THREE.Color(bg) : null;
+  scene.fog.color.set(on ? bg : (dusk ? SKY_DUSK.fog : SKY_DAY.fog));
+  renderer.toneMappingExposure = on ? (dusk ? 0.9 : 0.74) : (dusk ? SKY_DUSK.exposure : SKY_DAY.exposure);
+  GROUND_PLANE.material = on ? CLAY_GROUND : MAT.ground;
+  const prof = dusk ? SKY_DUSK : SKY_DAY;
+  hemi.intensity = on ? prof.hemiI * 0.5 : prof.hemiI;
+  fill.intensity = on ? prof.fillI * 0.35 : prof.fillI;
+  scene.environmentIntensity = on ? prof.env * 0.5 : prof.env;
+}
+$('tClay').addEventListener('click', () => applyClay(!clay));
+
+$('tFull').addEventListener('click', async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch (e) { /* not allowed here */ }
+});
+
+// presentation tour
+const TOUR = ['overview', 'street', 'plaza', 'road', 'drone', 'soi', 'top'];
+let tour = null;
+function stopTour() {
+  if (!tour) return;
+  clearTimeout(tour.timer); tour = null;
+  document.body.classList.remove('touring'); pressed($('tTour'), false);
+  $('tTour').querySelector('span').textContent = 'นำเสนอ';
+  controls.autoRotate = $('tSpin').getAttribute('aria-pressed') === 'true';
+}
+function tourStep() {
+  if (!tour) return;
+  const name = TOUR[tour.i % TOUR.length]; tour.i++;
+  setView(name, 3.2);
+  controls.autoRotate = !['plaza', 'soi', 'road'].includes(name); controls.autoRotateSpeed = 0.45;
+  tour.timer = setTimeout(tourStep, 9000);
+}
+$('tTour').addEventListener('click', e => {
+  e.stopPropagation();
+  if (tour) { stopTour(); return; }
+  select(null);
+  tour = { i: 0, timer: 0 };
+  document.body.classList.add('touring'); pressed($('tTour'), true);
+  $('tTour').querySelector('span').textContent = 'หยุดนำเสนอ';
+  tourStep();
+});
+addEventListener('keydown', e => { if (e.key === 'Escape') { stopTour(); select(null); } });
+
+viewBtns.forEach(b => b.addEventListener('click', () => {
+  stopTour();
+  if (location.hash.slice(1) === b.dataset.view) setView(b.dataset.view); else location.hash = b.dataset.view;
+}));
+addEventListener('hashchange', () => { const h = location.hash.slice(1); if (VIEWS[h]) setView(h); });
+
+// ---------------------------------------------------------------- resize + loop
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); labelRenderer.setSize(w, h);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+const ro = new ResizeObserver(resize); ro.observe(stage); resize();
+
+const startView = VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'overview';
+setView(startView, 0);
+if (startView === 'overview' && !matchMedia('(prefers-reduced-motion: reduce)').matches && !navigator.webdriver) {
+  // one gentle fly-in from higher up
+  const endPos = camera.position.clone(), endTgt = controls.target.clone();
+  camera.position.copy(endTgt.clone().add(endPos.clone().sub(endTgt).multiplyScalar(1.6)).add(new THREE.Vector3(0, 60, 0)));
+  controls.update();
+  flyToPose(endPos, endTgt, camera.fov, 2.6);
+}
+const clock = new THREE.Clock();
+let firstFrame = true, frameNo = 0;
+const occluders = [];
+site.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.parent && INFO[o.parent.userData.id]) occluders.push(o); });
+const _lp = new THREE.Vector3(), occRay = new THREE.Raycaster();
+function declutter() {
+  if (document.body.classList.contains('hide-labels')) return;
+  const kept = [];
+  for (const L of LABELS) {
+    const el = labelEls[L.id];
+    if (el.style.display === 'none') continue;
+    _lp.copy(P(...L.pos)); const dist = _lp.distanceTo(camera.position);
+    occRay.set(camera.position, _lp.sub(camera.position).normalize()); occRay.far = dist - 1.5;
+    if (L.id !== selected && (dist > 700 || occRay.intersectObjects(occluders, false).length)) { el.style.visibility = 'hidden'; continue; }
+    el.style.visibility = 'visible';
+    const r = el.getBoundingClientRect();
+    if (!r.width) continue;
+    const hit = L.id !== selected && kept.some(k => r.left < k.right + 4 && r.right > k.left - 4 && r.top < k.bottom + 3 && r.bottom > k.top - 3);
+    if (hit) el.style.visibility = 'hidden'; else kept.push(r);
+  }
+}
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.1), t = clock.elapsedTime;
+  if (tween) {
+    tween.t += dt / tween.dur; const k = ease(Math.min(1, tween.t));
+    camera.position.lerpVectors(tween.p0, tween.p1, k);
+    controls.target.lerpVectors(tween.t0, tween.t1, k);
+    camera.fov = tween.f0 + (tween.f1 - tween.f0) * k; camera.updateProjectionMatrix();
+    if (tween.t >= 1) tween = null;
+  }
+  controls.update();
+  if (camera.position.y < 0.9) { const d = 0.9 - camera.position.y; camera.position.y += d; if (controls.target.y < 0.5) controls.target.y += d; }
+  for (const f of TICKERS) f(t, dt);
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+  if ((frameNo++ % 6) === 0) declutter();
+  if (firstFrame) { firstFrame = false; requestAnimationFrame(() => document.getElementById('loading').classList.add('done')); window.__ready = true; }
+});
+window.__view = n => setView(n, 0);
+window.__site = site; window.__THREE = THREE;
+for (const [k, m] of Object.entries(MAT)) if (!m.name) m.name = k;
+window.__info = () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures });
+window.__dusk = on => setDusk(on);
+window.__clay = on => applyClay(on);
+window.__select = id => select(id, true);
+window.__ortho = (x0, z0, x1, z1, w, h) => { // test hook: orthographic plan render as data URL
+  const cam = new THREE.OrthographicCamera(x0 - OFF.x, x1 - OFF.x, -(z0 - OFF.z), -(z1 - OFF.z), 1, 2000);
+  cam.position.set(0, 1000, 0); cam.up.set(0, 0, -1); cam.lookAt(0, 0, 0);
+  const labelsWas = document.body.classList.contains('hide-labels'); sky.visible = false;
+  renderer.setSize(w, h, false); renderer.render(scene, cam);
+  const url = renderer.domElement.toDataURL('image/png'); sky.visible = true; resize(); return url;
+};
+window.__pose = (pos, tgt, fov) => flyToPose(P(...pos), P(...tgt), fov || 45, 0);
+
+</script>
+</body>
+</html>
